@@ -1,56 +1,93 @@
-# Welcome to your Expo app 👋
+# ВТБ Go
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Хакатон-прототип Scan & Go внутри банковского приложения. Покупатель собирает корзину, подтверждает оплату конкретной версии корзины и видит статус покупки вместе с демо-чеком.
 
-## Get started
+Это **не** действующий сервис ВТБ. Кассовые, банковские и цифроворублёвые интеграции смоделированы. Демо-чек не является фискальным документом.
 
-1. Install dependencies
+## Что уже есть
 
-   ```bash
-   npm install
-   ```
+- Сессия покупки, привязанная к торговой точке
+- Сканирование QR магазина и штрихкодов (камера + ручной ввод)
+- Версии корзины: оплачивается только подтверждённая версия
+- Идемпотентная оплата (повтор запроса не создаёт второе списание)
+- Три сбоя: отказ банка, задержка, потерянный ответ
+- Корректировка кассиром и лист «магазин изменил корзину»
+- История, демо-чек, минимальный возврат, Face ID на подтверждении
+- Скрытая демо-панель (долгое нажатие на «ВТБ Go»)
 
-2. Start the app
+Backend в этом репозитории — mock с тем же контрактом, что и будущий HTTP-клиент. Чтобы переключиться на реальный API, задайте `EXPO_PUBLIC_API_URL`.
 
-   ```bash
-   npx expo start
-   ```
+## Пакетный менеджер
 
-In the output, you'll find options to open the app in a
+Проект на **npm**. Команды ниже — те, которыми собирался прототип.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Запуск
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+Нужен development build: камера и Face ID не работают в Expo Go. Для `run:ios` нужен установленный **Xcode** (не только Command Line Tools).
 
-## Get a fresh project
-
-When you're ready, run:
+Что уже выполнялось в этом репозитории (npm):
 
 ```bash
-npm run reset-project
+npx create-expo-app@latest . --template default --yes
+npx expo install expo-dev-client expo-camera expo-local-authentication @react-native-async-storage/async-storage
+npx expo install zustand @tanstack/react-query
+npm install -D jest@29 @types/jest ts-jest
+CI=1 npx expo prebuild --clean
+npm test
+npx tsc --noEmit
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Папки `ios/` и `android/` сгенерированы. Сборка на iPhone:
 
-### Other setup steps
+```bash
+npx expo run:ios --device
+npx expo start
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+После изменения нативных зависимостей или `app.json` снова выполните `npx expo prebuild --clean` и пересоберите.
 
-## Learn more
+## Сценарий защиты
 
-To learn more about developing your project with Expo, look at the following resources:
+1. Долгое нажатие на заголовок **ВТБ Go** → демо-панель.
+2. Режим платежа: **Успех**, режим чека: **Чек сразу**.
+3. «Начать покупку» в магазине «У дома» или QR `VTBGO-STORE-UDOMA`.
+4. Добавьте 2–3 товара камерой / ручным вводом / кнопками панели.
+5. «Завершить покупку». На экране оплаты видна **версия корзины**.
+6. В панели: **Кассир добавил товар**. В приложении — лист с новой суммой. «Понятно», затем оплата новой суммы.
+7. Режим **Потерять ответ** → «Оплатить». Экран «Проверяем статус», не зелёный успех. «Повторить запрос» возвращает тот же платёж.
+8. Код выхода не используется: после оплаты — экран покупки и демо-чек.
+9. История → «Оформить возврат». В панели: «Магазин подтвердил» → «Возврат проведён».
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Каталог для живого сканирования
 
-## Join the community
+Штрихкоды в `src/api/mock/catalog.json`. Подставьте EAN-13 тех товаров, которые принесёте на защиту:
 
-Join our community of developers creating universal apps.
+| Штрихкод        | Название                 | Цена |
+| --------------- | ------------------------ | ---- |
+| 7613036930466   | Кофе Nescafé Gold 95 г   | 190  |
+| 8410108045043   | Круассан                 | 120  |
+| 3068320111007   | Вода Evian 0,5 л         | 80   |
+| 5449000000996   | Coca-Cola 0,33 л         | 119  |
+| 3017620422003   | Nutella 400 г            | 289  |
+| 5000159407236   | KitKat                   | 89   |
+| 7622210993641   | Alpen Gold молочный      | 99   |
+| 4600494600173   | Вода BonAqua 0,5 л       | 65   |
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+QR магазина: `VTBGO-STORE-UDOMA`.
+
+## Тесты
+
+```bash
+npm test
+```
+
+Проверяют идемпотентность, устаревшую версию корзины, переходы состояний, потерю ответа и возврат.
+
+## Структура
+
+- `src/app` — экраны Expo Router
+- `src/domain` — типы и state-machine
+- `src/api` — контракт, `MockApi`, заглушка `HttpApi`
+- `src/ui` — токены и базовые компоненты
+- `src/features` — корзина, сканер, способы оплаты, чек
+- `__tests__/domain` — Jest по доменной логике mock

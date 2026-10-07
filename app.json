@@ -1,18 +1,25 @@
 {
   "expo": {
-    "name": "fintekhrazueb",
-    "slug": "fintekhrazueb",
+    "name": "ВТБ Go",
+    "slug": "vtb-go",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "fintekhrazueb",
-    "userInterfaceStyle": "automatic",
+    "scheme": "vtbgo",
+    "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "supportsTablet": false,
+      "bundleIdentifier": "ru.vtb.go.hackathon",
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Камера нужна, чтобы сканировать QR магазина и штрихкоды товаров",
+        "NSFaceIDUsageDescription": "Подтвердите оплату с помощью Face ID"
+      }
     },
     "android": {
+      "package": "ru.vtb.go.hackathon",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0033A0",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -25,10 +32,25 @@
     },
     "plugins": [
       "expo-router",
+      "expo-dev-client",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Камера нужна, чтобы сканировать QR магазина и штрихкоды товаров",
+          "barcodeScannerEnabled": true,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Подтвердите оплату с помощью Face ID"
+        }
+      ],
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#0033A0",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }

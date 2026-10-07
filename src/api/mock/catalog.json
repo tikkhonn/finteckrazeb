@@ -1,0 +1,42 @@
+[
+  {
+    "barcode": "7613036930466",
+    "name": "Кофе Nescafé Gold 95 г",
+    "price": 190
+  },
+  {
+    "barcode": "8410108045043",
+    "name": "Круассан",
+    "price": 120
+  },
+  {
+    "barcode": "3068320111007",
+    "name": "Вода Evian 0,5 л",
+    "price": 80
+  },
+  {
+    "barcode": "5449000000996",
+    "name": "Coca-Cola 0,33 л",
+    "price": 119
+  },
+  {
+    "barcode": "3017620422003",
+    "name": "Nutella 400 г",
+    "price": 289
+  },
+  {
+    "barcode": "5000159407236",
+    "name": "KitKat",
+    "price": 89
+  },
+  {
+    "barcode": "7622210993641",
+    "name": "Alpen Gold молочный",
+    "price": 99
+  },
+  {
+    "barcode": "4600494600173",
+    "name": "Вода BonAqua 0,5 л",
+    "price": 65
+  }
+]

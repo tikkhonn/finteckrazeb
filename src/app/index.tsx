@@ -1,98 +1,72 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+import { isMockApi } from '@/api/apiProvider';
+import { DEMO_STORE } from '@/api/mock/stores';
+import { useStartSession } from '@/queries/hooks';
+import { useUiStore } from '@/store/uiStore';
+import { Button, Card, Screen, colors, spacing, typography } from '@/ui';
 
 export default function HomeScreen() {
+  const start = useStartSession();
+  const setActiveSession = useUiStore((s) => s.setActiveSession);
+
+  async function openStore(storeId: string) {
+    const session = await start.mutateAsync(storeId);
+    setActiveSession(session.id);
+    router.push(`/session/${session.id}/cart`);
+  }
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    <Screen>
+      <Pressable
+        onLongPress={() => {
+          if (isMockApi) {
+            router.push('/demo-panel');
+          }
+        }}
+        delayLongPress={500}
+      >
+        <Text style={typography.title}>ВТБ Go</Text>
+      </Pressable>
+      <Text style={typography.h2}>Покупки без очереди</Text>
+      <Text style={styles.lead}>
+        Сканируйте товары и оплачивайте в приложении банка
+      </Text>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+      <Button title="Сканировать QR магазина" onPress={() => router.push('/scan-store')} />
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+      <Card>
+        <Text style={styles.section}>Рядом с вами</Text>
+        <Text style={styles.store}>{DEMO_STORE.name}</Text>
+        <Text style={styles.meta}>Доступен Scan & Go</Text>
+        <Text style={styles.note}>
+          Геолокация — ориентир. Для начала покупки лучше подтвердить точку QR на входе.
+        </Text>
+        <Button
+          title="Начать покупку"
+          variant="secondary"
+          loading={start.isPending}
+          onPress={() => void openStore(DEMO_STORE.id)}
+        />
+      </Card>
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+      <View style={{ gap: spacing.sm }}>
+        <Text style={styles.section}>Мои покупки</Text>
+        <Button
+          title="Чеки и запросы на возврат"
+          variant="ghost"
+          onPress={() => router.push('/history')}
+        />
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+  lead: { ...typography.body, color: colors.textMuted },
+  section: { fontSize: 13, fontWeight: '600', color: colors.textMuted, textTransform: 'uppercase' },
+  store: { fontSize: 18, fontWeight: '700', color: colors.text },
+  meta: { color: colors.success, fontWeight: '600' },
+  note: { fontSize: 13, color: colors.textMuted },
 });
