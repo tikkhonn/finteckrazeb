@@ -23,6 +23,7 @@ export interface Store {
   address: string;
   qr: string;
   scenario: 'scan_and_go';
+  distanceM: number;
 }
 
 export interface CatalogItem {

@@ -2,9 +2,10 @@ import { MockEngine } from '@/api/mock/engine';
 import { VtbGoError } from '@/domain/errors';
 import type { SimulatorConfig } from '@/domain/types';
 
-const COFFEE = '7613036930466';
-const WATER = '3068320111007';
+const COFFEE = '7613036930468';
+const WATER = '3068320111001';
 const UNKNOWN = '0000000000000';
+const CUSTOM = '4006381333931';
 
 function createEngine(sim: SimulatorConfig, now = 1_700_000_000_000) {
   let clock = now;
@@ -89,6 +90,66 @@ describe('MockEngine', () => {
     } catch (error) {
       expect((error as VtbGoError).code).toBe('ITEM_NOT_FOUND');
     }
+  });
+
+  it('битый штрихкод даёт INVALID_BARCODE, а не ITEM_NOT_FOUND', () => {
+    const { engine } = createEngine({ paymentMode: 'success', receiptMode: 'immediate' });
+    const session = engine.startSession('store_udoma');
+    try {
+      engine.addItem(session.id, '7613036930460');
+      throw new Error('должно было упасть');
+    } catch (error) {
+      expect((error as VtbGoError).code).toBe('INVALID_BARCODE');
+    }
+  });
+
+  it('товар, заведённый в каталог, попадает в корзину по скану', () => {
+    const { engine } = createEngine({ paymentMode: 'success', receiptMode: 'immediate' });
+    engine.upsertCatalogItem({ barcode: CUSTOM, name: 'Карандаш', price: 45 });
+    const session = engine.startSession('store_udoma');
+    const cart = engine.addItem(session.id, CUSTOM);
+    expect(cart.items).toEqual([
+      expect.objectContaining({ barcode: CUSTOM, name: 'Карандаш', unitPrice: 45, qty: 1 }),
+    ]);
+  });
+
+  it('повторный EAN обновляет карточку, а не создаёт дубль', () => {
+    const { engine } = createEngine({ paymentMode: 'success', receiptMode: 'immediate' });
+    const before = engine.getCatalog().length;
+    engine.upsertCatalogItem({ barcode: COFFEE, name: 'Кофе дешевле', price: 150 });
+    const catalog = engine.getCatalog();
+    expect(catalog).toHaveLength(before);
+    expect(catalog.find((item) => item.barcode === COFFEE)).toMatchObject({ name: 'Кофе дешевле', price: 150 });
+  });
+
+  it('UPC-A находит товар, заведённый как EAN-13', () => {
+    const { engine } = createEngine({ paymentMode: 'success', receiptMode: 'immediate' });
+    engine.upsertCatalogItem({ barcode: '0036000291452', name: 'Импорт', price: 99 });
+    const session = engine.startSession('store_udoma');
+    expect(engine.addItem(session.id, '036000291452').items[0].name).toBe('Импорт');
+  });
+
+  it('удалённый товар больше не сканируется', () => {
+    const { engine } = createEngine({ paymentMode: 'success', receiptMode: 'immediate' });
+    engine.deleteCatalogItem(COFFEE);
+    const session = engine.startSession('store_udoma');
+    expect(() => engine.addItem(session.id, COFFEE)).toThrow(VtbGoError);
+  });
+
+  it('сброс демо не трогает каталог, а сброс каталога возвращает сид', () => {
+    const { engine } = createEngine({ paymentMode: 'success', receiptMode: 'immediate' });
+    const seed = engine.getCatalog();
+    engine.upsertCatalogItem({ barcode: CUSTOM, name: 'Карандаш', price: 45 });
+    engine.reset();
+    expect(engine.getCatalog().some((item) => item.barcode === CUSTOM)).toBe(true);
+    engine.resetCatalogToSeed();
+    expect(engine.getCatalog()).toEqual(seed);
+  });
+
+  it('товар без названия или с нулевой ценой не сохраняется', () => {
+    const { engine } = createEngine({ paymentMode: 'success', receiptMode: 'immediate' });
+    expect(() => engine.upsertCatalogItem({ barcode: CUSTOM, name: ' ', price: 10 })).toThrow(VtbGoError);
+    expect(() => engine.upsertCatalogItem({ barcode: CUSTOM, name: 'Ок', price: 0 })).toThrow(VtbGoError);
   });
 
   it('потерянный ответ: повтор с тем же ключом возвращает успешный платёж', () => {

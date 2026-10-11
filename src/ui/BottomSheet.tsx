@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spacing, typography } from './tokens';
+import { useTheme } from './theme';
+import { radius, spacing } from './tokens';
 
 interface BottomSheetProps {
   visible: boolean;
@@ -11,11 +12,12 @@ interface BottomSheetProps {
 }
 
 export function BottomSheet({ visible, title, children, onClose }: BottomSheetProps) {
+  const { colors, typography } = useTheme();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.wrap}>
-        <Pressable style={styles.overlay} onPress={onClose} />
-        <View style={styles.sheet}>
+        <Pressable style={[styles.overlay, { backgroundColor: colors.overlay }]} onPress={onClose} />
+        <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
           <Text style={typography.h2}>{title}</Text>
           {children}
         </View>
@@ -32,13 +34,11 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    backgroundColor: colors.overlay,
   },
   sheet: {
-    backgroundColor: colors.surface,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
-    padding: spacing.xl,
+    padding: spacing.lg,
     gap: spacing.lg,
   },
 });

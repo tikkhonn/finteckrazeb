@@ -1,18 +1,27 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 
 import { isVtbGoError } from '@/domain/errors';
 import { BarcodeScanner } from '@/features/BarcodeScanner';
 import { useAddItem } from '@/queries/hooks';
-import { Button, Screen, colors, spacing } from '@/ui';
+import { Button, Screen, spacing, useTheme } from '@/ui';
 
 export default function ScanItemScreen() {
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const addItem = useAddItem(id);
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [focused, setFocused] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      setFocused(true);
+      return () => setFocused(false);
+    }, []),
+  );
 
   async function add(barcode: string) {
     setError(null);
@@ -32,10 +41,12 @@ export default function ScanItemScreen() {
 
   return (
     <Screen>
-      <BarcodeScanner
-        hint="Наведите камеру на штрихкод товара"
-        onScan={(value) => void add(value)}
-      />
+      {focused ? (
+        <BarcodeScanner
+          hint="Наведите камеру на штрихкод товара"
+          onScan={(value) => void add(value)}
+        />
+      ) : null}
       <Text style={{ color: colors.textMuted }}>Или введите EAN-13 вручную</Text>
       <TextInput
         value={code}

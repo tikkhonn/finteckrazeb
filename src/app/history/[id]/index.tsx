@@ -6,9 +6,10 @@ import { ReceiptView } from '@/features/ReceiptView';
 import { formatRub } from '@/domain/money';
 import { usePurchase } from '@/queries/hooks';
 import { useUiStore } from '@/store/uiStore';
-import { Button, Card, Screen, StatusBadge, colors } from '@/ui';
+import { Button, Card, Screen, StatusBadge, useTheme } from '@/ui';
 
 export default function PurchaseScreen() {
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data } = usePurchase(id);
   const setActiveSession = useUiStore((s) => s.setActiveSession);
@@ -43,11 +44,15 @@ export default function PurchaseScreen() {
         ))}
       </Card>
 
-      {data.receipt ? <ReceiptView receipt={data.receipt} /> : <Text>Чек ещё не сформирован</Text>}
+      {data.receipt ? (
+        <ReceiptView receipt={data.receipt} storeName={data.session.storeName} />
+      ) : (
+        <Text style={{ color: colors.textMuted }}>Чек ещё не сформирован</Text>
+      )}
 
       {data.refunds.map((refund) => (
         <Card key={refund.id}>
-          <Text style={{ fontWeight: '600' }}>Возврат: {refund.itemName}</Text>
+          <Text style={{ fontWeight: '600', color: colors.text }}>Возврат: {refund.itemName}</Text>
           <Text style={{ color: colors.textMuted }}>
             {formatRub(refund.amount)} · {refund.status}
           </Text>

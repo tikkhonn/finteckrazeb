@@ -1,13 +1,17 @@
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 
 import { getMockApi, isMockApi } from '@/api/apiProvider';
-import type { PaymentSimMode, ReceiptSimMode } from '@/domain/types';
+import type { CatalogItem, PaymentSimMode, ReceiptSimMode } from '@/domain/types';
+import { applyFlipHide } from '@/features/applyFlipHide';
+import { DemoCatalogEditor } from '@/features/DemoCatalogEditor';
 import { queryClient } from '@/queries/client';
 import { queryKeys } from '@/queries/keys';
 import { useDemoStore } from '@/store/demoStore';
+import { usePrefsStore } from '@/store/prefsStore';
 import { useUiStore } from '@/store/uiStore';
-import { Button, Card, Screen, colors, spacing } from '@/ui';
+import { Button, Card, Screen, spacing, useTheme } from '@/ui';
 
 async function refreshSession(sessionId: string) {
   await queryClient.invalidateQueries({ queryKey: queryKeys.session(sessionId) });
@@ -28,22 +32,24 @@ const RECEIPT_MODES: { id: ReceiptSimMode; title: string }[] = [
 ];
 
 export default function DemoPanelScreen() {
+  const { colors } = useTheme();
   const mock = getMockApi();
   const sessionId = useUiStore((s) => s.activeSessionId);
   const paymentMode = useDemoStore((s) => s.paymentMode);
   const receiptMode = useDemoStore((s) => s.receiptMode);
   const setPaymentMode = useDemoStore((s) => s.setPaymentMode);
   const setReceiptMode = useDemoStore((s) => s.setReceiptMode);
+  const hideBalances = usePrefsStore((s) => s.hideBalances);
+  const [catalog, setCatalog] = useState<CatalogItem[]>(() => mock?.getCatalog() ?? []);
 
   if (!isMockApi || !mock) {
     return (
       <Screen>
-        <Text>Демо-панель доступна только с mock-адаптером.</Text>
+        <Text style={{ color: colors.text }}>Демо-панель доступна только с mock-адаптером.</Text>
       </Screen>
     );
   }
 
-  const catalog = mock.getCatalog();
   const events = mock.listEvents(sessionId ?? undefined).slice(-12).reverse();
 
   function requireSession(): string | null {
@@ -54,6 +60,11 @@ export default function DemoPanelScreen() {
     return sessionId;
   }
 
+  const mutateCatalog = async (action: () => Promise<unknown>) => {
+    await action();
+    setCatalog(mock.getCatalog());
+  };
+
   return (
     <Screen>
       <Text style={{ fontSize: 22, fontWeight: '700', color: colors.text }}>Демо-панель</Text>
@@ -61,8 +72,23 @@ export default function DemoPanelScreen() {
         Сессия: {sessionId ?? 'нет'} · долгое нажатие на «ВТБ Go» открывает эту панель
       </Text>
 
+      <DemoCatalogEditor
+        catalog={catalog}
+        onSave={(item) => mutateCatalog(() => mock.upsertCatalogItem(item))}
+        onDelete={(barcode) => mutateCatalog(() => mock.deleteCatalogItem(barcode))}
+        onReset={() => mutateCatalog(() => mock.resetCatalog())}
+      />
+
       <Card>
-        <Text style={{ fontWeight: '700' }}>Режим платежа</Text>
+        <Text style={{ fontWeight: '700', color: colors.text }}>Скрытие баланса</Text>
+        <Text style={{ color: colors.textMuted, fontSize: 13 }}>
+          Сейчас {hideBalances ? 'скрыт' : 'виден'}. Кнопка = тот же жест переворота.
+        </Text>
+        <Button title="Имитировать переворот" variant="secondary" onPress={applyFlipHide} />
+      </Card>
+
+      <Card>
+        <Text style={{ fontWeight: '700', color: colors.text }}>Режим платежа</Text>
         {PAYMENT_MODES.map((mode) => (
           <Button
             key={mode.id}
@@ -74,7 +100,7 @@ export default function DemoPanelScreen() {
       </Card>
 
       <Card>
-        <Text style={{ fontWeight: '700' }}>Режим чека</Text>
+        <Text style={{ fontWeight: '700', color: colors.text }}>Режим чека</Text>
         {RECEIPT_MODES.map((mode) => (
           <Button
             key={mode.id}
@@ -86,7 +112,7 @@ export default function DemoPanelScreen() {
       </Card>
 
       <Card>
-        <Text style={{ fontWeight: '700' }}>Кассир добавил товар</Text>
+        <Text style={{ fontWeight: '700', color: colors.text }}>Кассир добавил товар</Text>
         {catalog.map((item) => (
           <Button
             key={`c-${item.barcode}`}
@@ -105,7 +131,7 @@ export default function DemoPanelScreen() {
       </Card>
 
       <Card>
-        <Text style={{ fontWeight: '700' }}>Добавить в корзину (без камеры)</Text>
+        <Text style={{ fontWeight: '700', color: colors.text }}>Добавить в корзину (без камеры)</Text>
         {catalog.map((item) => (
           <Button
             key={`a-${item.barcode}`}
@@ -124,7 +150,7 @@ export default function DemoPanelScreen() {
       </Card>
 
       <Card>
-        <Text style={{ fontWeight: '700' }}>Возврат</Text>
+        <Text style={{ fontWeight: '700', color: colors.text }}>Возврат</Text>
         <View style={{ gap: spacing.sm }}>
           <Button
             title="Магазин подтвердил возврат"
@@ -154,7 +180,7 @@ export default function DemoPanelScreen() {
       </Card>
 
       <Card>
-        <Text style={{ fontWeight: '700' }}>Журнал событий</Text>
+        <Text style={{ fontWeight: '700', color: colors.text }}>Журнал событий</Text>
         {events.length === 0 ? <Text style={{ color: colors.textMuted }}>Пока пусто</Text> : null}
         {events.map((event) => (
           <Text key={event.id} style={{ color: colors.text, fontSize: 13 }}>

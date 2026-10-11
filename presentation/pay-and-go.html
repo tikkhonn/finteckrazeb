@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pay & Go — презентация</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+/* ===========================================
+   THEME
+   Цвета: тёмный фиолетово-синий фон, свечения
+   coral / magenta (референс) + синий бренда.
+   =========================================== */
+:root {
+    --stage-bg: #07051a;
+    --slide-bg: #0b0820;
+    --ink: #ffffff;
+    --muted: rgba(226, 222, 255, 0.72);
+    --faint: rgba(226, 222, 255, 0.5);
+    --blue: #2f6bff;
+    --blue-soft: #7aa6ff;
+    --pink: #e8459a;
+    --coral: #ff8a5b;
+    --violet: #7b4dff;
+    --glass: rgba(255, 255, 255, 0.055);
+    --glass-strong: rgba(255, 255, 255, 0.09);
+    --line: rgba(255, 255, 255, 0.14);
+    --warm: linear-gradient(120deg, var(--coral), var(--pink));
+    --cool: linear-gradient(120deg, var(--blue), var(--violet));
+
+    --font-display: 'Unbounded', sans-serif;
+    --font-body: 'Manrope', sans-serif;
+
+    --pad-x: 110px;
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ===========================================
+   VIEWPORT BASE (frontend-slides, без изменений)
+   =========================================== */
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: var(--stage-bg, #000);
+}
+
+.deck-viewport {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: var(--stage-bg, #000);
+}
+
+.deck-stage {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    transform-origin: 0 0;
+    background: var(--slide-bg, #fff);
+}
+
+.slide {
+    position: absolute;
+    inset: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    display: block;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    background: var(--slide-bg, #fff);
+}
+
+.slide.active,
+.slide.visible {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 1;
+}
+
+img,
+video,
+canvas,
+svg {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.deck-controls {
+    position: fixed;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%);
+    z-index: 1000;
+}
+
+@media print {
+    html,
+    body {
+        width: 1920px;
+        height: auto;
+        overflow: visible;
+        background: #fff;
+    }
+
+    .deck-viewport {
+        position: static;
+        overflow: visible;
+        background: #fff;
+    }
+
+    .deck-stage {
+        position: static;
+        width: auto;
+        height: auto;
+        transform: none !important;
+        background: none;
+    }
+
+    .slide {
+        position: relative;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        width: 1920px;
+        height: 1080px;
+        break-after: page;
+        page-break-after: always;
+    }
+
+    .slide:last-child {
+        break-after: auto;
+        page-break-after: auto;
+    }
+
+    .deck-controls {
+        display: none !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.2s !important;
+    }
+}
+
+/* ===========================================
+   SLIDE BACKGROUND
+   Свечения задаются переменными на слайде:
+   --ax/--ay (coral), --bx/--by (magenta), --cx/--cy (blue)
+   =========================================== */
+body { font-family: var(--font-body); color: var(--ink); }
+
+.slide::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background:
+        radial-gradient(820px 640px at var(--ax, 88%) var(--ay, 8%), rgba(255, 138, 91, 0.5), transparent 62%),
+        radial-gradient(1000px 760px at var(--bx, 100%) var(--by, 100%), rgba(232, 69, 154, 0.5), transparent 62%),
+        radial-gradient(1000px 900px at var(--cx, 0%) var(--cy, 100%), rgba(47, 107, 255, 0.36), transparent 62%),
+        linear-gradient(140deg, #140d38 0%, #0b0820 52%, #1b0b2f 100%);
+}
+
+/* Лёгкое зерно поверх свечений */
+.slide::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.09;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+.glow-a { --ax: 92%; --ay: 6%;  --bx: 100%; --by: 100%; --cx: 0%;   --cy: 100%; }
+.glow-b { --ax: 10%; --ay: 0%;  --bx: 0%;   --by: 100%; --cx: 100%; --cy: 30%;  }
+.glow-c { --ax: 50%; --ay: 110%; --bx: 100%; --by: 0%;  --cx: 0%;   --cy: 0%;   }
+.glow-d { --ax: 70%; --ay: 40%; --bx: 30%;  --by: 110%; --cx: 0%;   --cy: 20%;  }
+
+.content {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    padding: 96px var(--pad-x) 120px;
+}
+
+/* ===========================================
+   CHROME (угловая линия, точки, подпись)
+   Вставляется в каждый слайд из JS
+   =========================================== */
+.chrome { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+
+.corner-line {
+    position: absolute;
+    top: 58px;
+    right: 72px;
+    width: 250px;
+    height: 44px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-left: none;
+    border-bottom: none;
+    border-radius: 0 26px 0 0;
+}
+
+.dots {
+    position: absolute;
+    right: var(--pad-x);
+    bottom: 56px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+.dots i {
+    width: 10px;
+    height: 10px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.3);
+}
+.dots i.on { width: 34px; background: #fff; }
+
+.wordmark {
+    position: absolute;
+    left: var(--pad-x);
+    bottom: 50px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font: 600 18px/1 var(--font-display);
+    letter-spacing: 0.08em;
+    color: var(--faint);
+}
+.wordmark img { width: 30px; height: 30px; border-radius: 8px; }
+
+/* ===========================================
+   TYPOGRAPHY
+   =========================================== */
+.kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    border-radius: 99px;
+    border: 1px solid var(--line);
+    background: var(--glass);
+    font: 600 20px/1 var(--font-body);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+.kicker::before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    border-radius: 99px;
+    background: var(--warm);
+}
+
+h1, h2 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    text-transform: uppercase;
+    line-height: 1.04;
+    letter-spacing: -0.01em;
+}
+h2 { font-size: 72px; margin-top: 26px; }
+
+h3 {
+    font: 700 32px/1.2 var(--font-display);
+    letter-spacing: -0.01em;
+}
+
+p, li { font-size: 26px; line-height: 1.45; color: var(--muted); }
+strong { color: var(--ink); font-weight: 700; }
+
+.warm-text {
+    background: var(--warm);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.src { font-size: 19px; color: var(--faint); }
+
+/* ===========================================
+   COMPONENTS
+   =========================================== */
+.glass {
+    position: relative;
+    border-radius: 32px;
+    border: 1px solid var(--line);
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.025));
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.6);
+}
+
+/* Карточка с градиентной обводкой */
+.glass.hot::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: linear-gradient(130deg, var(--coral), var(--pink) 45%, rgba(123, 77, 255, 0.4));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+.icon-tile {
+    flex: none;
+    width: 68px;
+    height: 68px;
+    border-radius: 20px;
+    display: grid;
+    place-items: center;
+    background: var(--warm);
+    box-shadow: 0 12px 30px -8px rgba(232, 69, 154, 0.7);
+}
+.icon-tile.cool { background: var(--cool); box-shadow: 0 12px 30px -8px rgba(47, 107, 255, 0.7); }
+.icon-tile svg { width: 34px; height: 34px; }
+
+.ico {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.num {
+    font: 800 76px/1 var(--font-display);
+    letter-spacing: -0.03em;
+}
+.lbl { font-size: 22px; line-height: 1.35; color: var(--muted); margin-top: 12px; }
+
+/* Телефон вокруг скриншота 780×1688 */
+.phone {
+    --w: 300px;
+    position: relative;
+    width: var(--w);
+    padding: 11px;
+    border-radius: calc(var(--w) * 0.165);
+    background: linear-gradient(150deg, #3d3557, #14111f 42%, #0a0914);
+    box-shadow:
+        inset 0 0 0 1.5px rgba(255, 255, 255, 0.24),
+        0 50px 90px -24px rgba(0, 0, 0, 0.75),
+        0 0 160px -30px var(--phone-glow, rgba(232, 69, 154, 0.55));
+}
+.phone img {
+    display: block;
+    width: 100%;
+    border-radius: calc(var(--w) * 0.13);
+}
+
+/* Кольцевая диаграмма. --p: 0..100 */
+.ring { position: relative; width: 230px; height: 230px; flex: none; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 16; }
+.ring .track { stroke: rgba(255, 255, 255, 0.1); }
+.ring .val {
+    stroke: url(#gWarm);
+    stroke-linecap: round;
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100px;
+    transition: stroke-dashoffset 1.6s var(--ease) 0.35s;
+}
+.slide.visible .ring .val { stroke-dashoffset: calc((100 - var(--p)) * 1px); }
+.ring.cool .val { stroke: url(#gCool); }
+.ring-num {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font: 800 46px/1 var(--font-display);
+    letter-spacing: -0.03em;
+}
+
+/* Горизонтальная полоса. --p: 0..100 */
+.bar {
+    height: 18px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+}
+.bar i {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: var(--warm);
+    transition: width 1.4s var(--ease) 0.4s;
+}
+.bar.cool i { background: var(--cool); }
+.slide.visible .bar i { width: calc(var(--p) * 1%); }
+
+.check-list { list-style: none; display: grid; gap: 16px; }
+.check-list li { display: flex; gap: 16px; align-items: flex-start; font-size: 24px; line-height: 1.4; }
+.check-list svg { flex: none; width: 30px; height: 30px; margin-top: 2px; color: #5ee39a; }
+.check-list.no svg { color: #ff8a9a; }
+
+/* ===========================================
+   REVEAL ANIMATIONS
+   Задержка: style="--d: N" (шаг 90 мс)
+   =========================================== */
+.reveal {
+    opacity: 0;
+    transform: translateY(34px);
+    transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
+    transition-delay: calc(var(--d, 0) * 90ms);
+}
+.reveal-phone {
+    opacity: 0;
+    transform: translateY(80px) rotate(var(--r, 0deg)) scale(0.96);
+    transition: opacity 1s var(--ease), transform 1.2s var(--ease);
+    transition-delay: calc(var(--d, 0) * 110ms);
+}
+.slide.visible .reveal { opacity: 1; transform: none; }
+.slide.visible .reveal-phone { opacity: 1; transform: rotate(var(--r, 0deg)); }
+
+@keyframes float {
+    0%, 100% { translate: 0 0; }
+    50% { translate: 0 -14px; }
+}
+.float { animation: float 6s ease-in-out infinite; }
+
+/* ===========================================
+   SLIDE 1 — TITLE
+   =========================================== */
+.title-slide .logo-row { display: flex; align-items: center; gap: 22px; margin-top: 70px; }
+.title-slide .logo-row img { width: 96px; height: 96px; border-radius: 26px; box-shadow: 0 20px 50px -10px rgba(47, 107, 255, 0.8); }
+.title-slide h1 {
+    font-size: 220px;
+    line-height: 0.92;
+    margin-top: 40px;
+    letter-spacing: -0.03em;
+}
+.title-slide h1 .amp { color: transparent; -webkit-text-stroke: 3px rgba(255, 255, 255, 0.85); }
+.title-slide .lead { max-width: 820px; margin-top: 44px; font-size: 32px; line-height: 1.4; color: var(--muted); }
+.title-slide .pills { display: flex; gap: 14px; margin-top: 46px; }
+.pill {
+    padding: 14px 24px;
+    border-radius: 99px;
+    border: 1px solid var(--line);
+    background: var(--glass);
+    font: 600 22px/1 var(--font-body);
+}
+.title-slide .phone-wrap { position: absolute; right: 250px; top: 120px; }
+.title-slide .chip-float { position: absolute; }
+.chip-float .t1 { font: 700 26px/1.1 var(--font-display); }
+.chip-float .t2 { font-size: 19px; color: var(--muted); margin-top: 6px; }
+
+/* ===========================================
+   SLIDE 2 — АУДИТОРИЯ
+   =========================================== */
+.aud-grid { display: grid; grid-template-columns: 760px 1fr; gap: 56px; margin-top: 56px; }
+.aud-main { padding: 48px 52px; }
+.aud-main .big { font: 800 64px/1.05 var(--font-display); margin: 30px 0 16px; letter-spacing: -0.02em; }
+.aud-main .sub { font: 600 28px/1.3 var(--font-body); color: var(--ink); }
+.aud-main p.desc { margin-top: 26px; }
+.rings { display: flex; gap: 44px; }
+.ring-item { display: flex; align-items: center; gap: 28px; }
+.ring-item .lbl { max-width: 210px; font-size: 23px; }
+.women { margin-top: 40px; padding: 38px 44px; }
+.women .row { display: grid; grid-template-columns: 150px 1fr 90px; align-items: center; gap: 22px; margin-top: 18px; font-size: 23px; color: var(--muted); }
+.women .row b { font: 700 28px/1 var(--font-display); color: var(--ink); text-align: right; }
+
+/* ===========================================
+   SLIDE 3 — ВТОРИЧНАЯ ЦА
+   =========================================== */
+.cards-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px; margin-top: 64px; }
+.card-tall { padding: 44px 42px; min-height: 610px; display: flex; flex-direction: column; }
+.card-tall .num { margin-top: 44px; }
+.card-tall .lbl { min-height: 60px; }
+.card-tall h3 { margin-top: 30px; }
+.card-tall p { margin-top: 16px; font-size: 24px; }
+
+/* ===========================================
+   SLIDE 4 — ОЧЕРЕДИ
+   =========================================== */
+.q-grid { display: grid; grid-template-columns: 1fr 1fr 640px; gap: 30px; margin-top: 60px; }
+.stat { padding: 38px 40px; }
+.stat .num { font-size: 84px; }
+.q-side { grid-row: span 2; grid-column: 3; padding: 46px 48px; display: flex; flex-direction: column; }
+.q-side .split { display: grid; gap: 26px; margin-top: 34px; }
+.q-side .split .head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; font-size: 24px; color: var(--muted); }
+.q-side .split .head b { font: 800 46px/1 var(--font-display); color: var(--ink); }
+.q-side .note { margin-top: auto; padding-top: 28px; border-top: 1px solid var(--line); font-size: 24px; }
+
+/* ===========================================
+   SLIDE 5 — БАНКОМАТЫ
+   =========================================== */
+.atm-grid { display: grid; grid-template-columns: 820px 1fr; gap: 60px; margin-top: 64px; }
+.atm-big .num { font-size: 124px; white-space: nowrap; }
+.atm-big .lbl { font-size: 30px; margin-top: 18px; }
+.atm-big p { margin-top: 40px; max-width: 720px; }
+.per-1000 { padding: 46px 50px; }
+.per-1000 .row { display: grid; grid-template-columns: 220px 1fr; align-items: center; gap: 30px; margin-top: 34px; }
+.per-1000 .row .v { font: 800 64px/1 var(--font-display); }
+.per-1000 .row .k { font-size: 22px; color: var(--muted); margin-top: 8px; }
+.blocks { display: flex; gap: 10px; }
+.blocks i { width: 46px; height: 46px; border-radius: 12px; background: var(--warm); }
+.blocks.atm i { background: var(--cool); }
+.per-1000 .x8 { margin-top: 40px; padding-top: 30px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 24px; }
+.per-1000 .x8 b { font: 800 60px/1 var(--font-display); }
+
+/* ===========================================
+   SLIDE 6 — НАЛИЧНЫЕ НА КАССЕ
+   =========================================== */
+.cash-grid { display: grid; grid-template-columns: 560px 1fr; gap: 50px; margin-top: 60px; }
+.cash-stats { display: grid; gap: 30px; }
+.steps { padding: 40px 50px; }
+.steps h3 { margin-bottom: 8px; }
+.step { display: grid; grid-template-columns: 64px 1fr; gap: 28px; align-items: center; padding: 16px 0; border-bottom: 1px dashed var(--line); }
+.step:last-of-type { border-bottom: none; }
+.step .n {
+    width: 64px; height: 64px; border-radius: 20px;
+    display: grid; place-items: center;
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    font: 700 28px/1 var(--font-display);
+}
+.step p { color: var(--ink); font-size: 28px; }
+.steps .verdict { margin-top: 16px; padding: 22px 28px; border-radius: 20px; background: rgba(255, 138, 91, 0.12); border: 1px solid rgba(255, 138, 91, 0.35); font-size: 24px; color: var(--ink); }
+
+/* ===========================================
+   SLIDE 7 — ЗАМКНУТЫЙ КОНТУР
+   =========================================== */
+.loop { position: absolute; left: 60px; top: 250px; width: 900px; height: 760px; }
+.loop svg.ring-path { position: absolute; left: 150px; top: 80px; width: 600px; height: 600px; max-width: none; max-height: none; overflow: visible; }
+.loop .node {
+    position: absolute;
+    width: 270px;
+    padding: 18px 20px;
+    border-radius: 24px;
+    text-align: center;
+    transform: translate(-50%, -50%);
+}
+.slide.visible .loop .node.reveal { transform: translate(-50%, -50%); }
+.loop .node h3 { font-size: 20px; }
+.loop .node p { font-size: 18px; line-height: 1.35; margin-top: 6px; }
+.loop .center {
+    position: absolute;
+    left: 450px; top: 380px;
+    width: 300px;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+.slide.visible .loop .center.reveal { transform: translate(-50%, -50%); }
+.loop .center .gap { font: 800 42px/1 var(--font-display); }
+.loop .center p { font-size: 21px; margin-top: 14px; }
+.loop-side { position: absolute; left: 1010px; right: var(--pad-x); top: 300px; }
+.loop-side p.lead { font-size: 28px; }
+.answer { margin-top: 44px; padding: 44px 48px; }
+.answer .tag { font: 700 20px/1 var(--font-body); letter-spacing: 0.14em; text-transform: uppercase; color: var(--coral); }
+.answer h3 { font-size: 40px; line-height: 1.2; margin-top: 18px; }
+
+/* ===========================================
+   SLIDE 8–9 — УТП
+   =========================================== */
+.usp { display: grid; grid-template-columns: 1fr 560px; gap: 60px; }
+.quote { padding: 44px 50px; margin-top: 46px; }
+.quote .mark { font: 800 90px/0.6 var(--font-display); color: var(--coral); display: block; height: 44px; }
+.quote p { font: 600 34px/1.35 var(--font-body); color: var(--ink); }
+.usp-feats { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 30px; }
+.feat { padding: 34px 36px; display: flex; gap: 24px; }
+.feat h3 { font-size: 26px; }
+.feat p { font-size: 22px; margin-top: 10px; }
+.usp-phones { position: relative; height: 100%; }
+.chip-float {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 20px 26px;
+    border-radius: 26px;
+}
+.eco { position: absolute; left: -40px; top: 430px; display: grid; gap: 18px; width: 440px; }
+
+.mile-quote { font: 800 66px/1.06 var(--font-display); text-transform: uppercase; margin-top: 34px; letter-spacing: -0.01em; }
+.mile-row { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 44px; }
+.mile-row .glass { padding: 36px 40px; }
+.mile-row .num { font-size: 56px; white-space: nowrap; }
+.bread { display: flex; flex-direction: column; gap: 22px; }
+.bread .t { font: 700 30px/1.2 var(--font-display); }
+
+/* ===========================================
+   SLIDE 10 — FLOW
+   =========================================== */
+.flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 40px; margin-top: 40px; justify-items: center; }
+.flow-item { display: flex; flex-direction: column; align-items: center; }
+.flow-item .cap { display: flex; gap: 16px; align-items: center; margin-top: 26px; width: 320px; }
+.flow-item .cap b { font: 800 30px/1 var(--font-display); color: var(--coral); }
+.flow-item .cap span { font: 600 23px/1.3 var(--font-body); color: var(--ink); }
+
+/* ===========================================
+   SLIDE 11 — СТАДИЯ
+   =========================================== */
+.stage-grid { display: grid; grid-template-columns: 1fr 600px 330px; gap: 40px; margin-top: 50px; align-items: start; }
+.stage-grid .glass { padding: 40px 44px; }
+.stage-grid h3 { font-size: 26px; margin-bottom: 26px; }
+.demo-card { margin-top: 26px; }
+.demo-card p { font-size: 22px; }
+
+/* ===========================================
+   SLIDE 12 — ЦЕННОСТЬ
+   =========================================== */
+.value-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px; margin-top: 60px; }
+.value { padding: 50px 46px; min-height: 480px; }
+.value .who { font: 800 52px/1 var(--font-display); text-transform: uppercase; margin-top: 40px; }
+.value ul { list-style: none; margin-top: 30px; display: grid; gap: 16px; }
+.value li { font-size: 28px; padding-left: 30px; position: relative; color: var(--ink); }
+.value li::before { content: ''; position: absolute; left: 0; top: 14px; width: 12px; height: 12px; border-radius: 99px; background: var(--warm); }
+.first { margin-top: 40px; padding: 32px 44px; display: flex; align-items: center; gap: 28px; }
+.first p { color: var(--ink); font-size: 27px; }
+
+/* ===========================================
+   SLIDE 13 — ROADMAP
+   =========================================== */
+.road { position: relative; margin-top: 80px; }
+.road-line { position: absolute; left: 0; right: 0; top: 34px; height: 4px; border-radius: 99px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.road-line i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--coral), var(--pink), var(--violet), var(--blue)); transition: width 1.8s var(--ease) 0.3s; }
+.slide.visible .road-line i { width: 100%; }
+.road-grid { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); gap: 30px; }
+.road-dot { width: 72px; height: 72px; border-radius: 99px; display: grid; place-items: center; font: 700 24px/1 var(--font-display); background: #160f36; border: 2px solid rgba(255, 255, 255, 0.4); }
+.road-item:first-child .road-dot { background: var(--warm); border-color: transparent; }
+.road-card { margin-top: 30px; padding: 34px 34px 30px; min-height: 520px; display: flex; flex-direction: column; }
+.road-card .when { font: 600 20px/1 var(--font-body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--coral); }
+.road-card h3 { margin-top: 16px; font-size: 34px; }
+.road-card p { margin-top: 18px; font-size: 22px; }
+.road-card .kpi { margin-top: auto; padding-top: 22px; border-top: 1px solid var(--line); font-size: 21px; color: var(--ink); }
+.road-card .kpi span { display: block; font-size: 17px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); margin-bottom: 8px; }
+
+/* ===========================================
+   SLIDE 14 — ФИНАЛ
+   =========================================== */
+.final { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; height: 100%; padding-bottom: 40px; }
+.final img { width: 150px; height: 150px; border-radius: 40px; box-shadow: 0 30px 80px -10px rgba(47, 107, 255, 0.85); }
+.final h1 { font-size: 190px; margin-top: 50px; letter-spacing: -0.03em; line-height: 0.95; }
+.final .tag { font: 700 44px/1.2 var(--font-display); margin-top: 40px; }
+.final p { margin-top: 30px; font-size: 28px; }
+
+/* ===========================================
+   DECK CONTROLS (вне сцены)
+   =========================================== */
+.progress { position: fixed; left: 0; bottom: 0; height: 3px; background: linear-gradient(90deg, var(--coral), var(--pink)); z-index: 1000; transition: width 0.5s var(--ease); }
+
+/* ===========================================
+   INLINE EDITING (клавиша E)
+   =========================================== */
+.edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+.edit-toggle {
+    position: fixed; top: 18px; left: 18px; z-index: 10001;
+    width: 46px; height: 46px; border-radius: 14px;
+    border: 1px solid var(--line); background: rgba(20, 14, 48, 0.85); color: #fff;
+    font-size: 20px; cursor: pointer;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+}
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+.edit-toggle.active { background: var(--pink); }
+body.editing [contenteditable="true"] { outline: 2px dashed rgba(255, 138, 91, 0.6); outline-offset: 4px; border-radius: 6px; }
+</style>
+</head>
+<body>
+
+<!-- SVG: градиенты для колец и набор иконок (Lucide-стиль) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+        <linearGradient id="gWarm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff8a5b"/><stop offset="1" stop-color="#e8459a"/></linearGradient>
+        <linearGradient id="gCool" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2f6bff"/><stop offset="1" stop-color="#7b4dff"/></linearGradient>
+    </defs>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-store" viewBox="0 0 24 24"><path d="M3 9l1.6-5h14.8L21 9"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M5 12v9h14v-9"/><path d="M10 21v-5h4v5"/></symbol>
+    <symbol id="i-cash" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+    <symbol id="i-bank" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V11M9.5 21V11M14.5 21V11M19 21V11"/><path d="M12 3 3 8.5h18Z"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5"/><path d="M16.5 14h.01"/></symbol>
+    <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v.01M14 21h3M21 18v3h-3"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><path d="M7.5 7.5h.01"/></symbol>
+    <symbol id="i-bread" viewBox="0 0 24 24"><path d="M5 11a4 4 0 0 1 1-7.9C7 2.5 9.5 2 12 2s5 .5 6 1.1A4 4 0 0 1 19 11v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2Z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m8 12.5 2.7 2.7L16.5 9.5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+</svg>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+    <!-- ============ 1. ТИТУЛ ============ -->
+    <section class="slide title-slide glow-a active" aria-label="Титул">
+        <div class="content">
+            <span class="kicker reveal">Хакатон-прототип</span>
+            <div class="logo-row reveal" style="--d:1">
+                <img src="assets/logo.png" alt="Логотип Pay & Go">
+            </div>
+            <h1 class="reveal" style="--d:2">Pay <span class="amp">&</span><br>Go</h1>
+            <p class="lead reveal" style="--d:3">Scan&nbsp;&amp;&nbsp;Go, Take&nbsp;&amp;&nbsp;Go и снятие наличных на кассе в одном банковском приложении</p>
+            <div class="pills reveal" style="--d:4">
+                <span class="pill">Без очереди</span>
+                <span class="pill">Без банкомата</span>
+                <span class="pill">Без приложений магазинов</span>
+            </div>
+        </div>
+        <div class="phone-wrap">
+            <div class="phone reveal-phone float" style="--w:400px; --r:5deg; --d:2; --phone-glow: rgba(255,138,91,.6)">
+                <img src="assets/scr-home.png" alt="Главный экран приложения">
+            </div>
+            <div class="chip-float glass reveal" style="left:-210px; top:560px; --d:6">
+                <div class="icon-tile"><svg class="ico" style="color:#fff"><use href="#i-cash"/></svg></div>
+                <div><div class="t1">−3 000 ₽</div><div class="t2">Снятие выполнено</div></div>
+            </div>
+            <div class="chip-float glass reveal" style="right:-150px; top:120px; --d:7">
+                <div class="icon-tile cool"><svg class="ico" style="color:#fff"><use href="#i-qr"/></svg></div>
+                <div><div class="t1">Scan & Go</div><div class="t2">Оплата без кассы</div></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 2. ЦА: ОСНОВНАЯ ============ -->
+    <section class="slide glow-b" aria-label="Целевая аудитория">
+        <div class="content">
+            <span class="kicker reveal">Целевая аудитория</span>
+            <h2 class="reveal" style="--d:1">Кто будет<br>пользоваться первым</h2>
+            <div class="aud-grid">
+                <div class="glass hot aud-main reveal" style="--d:2">
+                    <div class="icon-tile"><svg class="ico" style="color:#fff"><use href="#i-users"/></svg></div>
+                    <div class="big">Горожане<br>25–45 лет</div>
+                    <div class="sub">Доход 100–150 тыс. ₽ в месяц</div>
+                    <p class="desc">Самая активная группа самообслуживания. Они привыкли к цифровым сценариям покупки, ценят время и не хотят стоять в очереди.</p>
+                </div>
+                <div>
+                    <div class="rings reveal" style="--d:3">
+                        <div class="ring-item">
+                            <div class="ring" style="--p:67"><svg viewBox="0 0 200 200"><circle class="track" cx="100" cy="100" r="86" pathLength="100"/><circle class="val" cx="100" cy="100" r="86" pathLength="100"/></svg><span class="ring-num">67%</span></div>
+                            <div class="lbl">выбирают кассы без кассира</div>
+                        </div>
+                        <div class="ring-item">
+                            <div class="ring cool" style="--p:83"><svg viewBox="0 0 200 200"><circle class="track" cx="100" cy="100" r="86" pathLength="100"/><circle class="val" cx="100" cy="100" r="86" pathLength="100"/></svg><span class="ring-num">83%</span></div>
+                            <div class="lbl">среди молодёжи до&nbsp;35&nbsp;лет</div>
+                        </div>
+                    </div>
+                    <div class="glass women reveal" style="--d:4">
+                        <h3>Женщины выбирают самообслуживание чаще</h3>
+                        <div class="row"><span>Женщины</span><div class="bar" style="--p:59"><i></i></div><b>59%</b></div>
+                        <div class="row"><span>Мужчины</span><div class="bar cool" style="--p:51"><i></i></div><b>51%</b></div>
+                        <p style="margin-top:22px; font-size:22px">Чаще делают ежедневные покупки для семьи и острее реагируют на очереди.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 3. ЦА: ВТОРИЧНАЯ И B2B ============ -->
+    <section class="slide glow-c" aria-label="Вторичная аудитория и партнёры">
+        <div class="content">
+            <span class="kicker reveal">Целевая аудитория</span>
+            <h2 class="reveal" style="--d:1">Кому это нужнее всего</h2>
+            <div class="cards-3">
+                <div class="glass card-tall reveal" style="--d:2">
+                    <div class="icon-tile"><svg class="ico" style="color:#fff"><use href="#i-pin"/></svg></div>
+                    <div class="num warm-text">1662</div>
+                    <div class="lbl">точки выдачи наличных в Башкортостане</div>
+                    <h3>Малые города и сёла</h3>
+                    <p>Где нет банков и банкоматов, снятие на кассе становится необходимостью. Банк России называет эту услугу социально значимой для таких территорий.</p>
+                </div>
+                <div class="glass card-tall reveal" style="--d:3">
+                    <div class="icon-tile"><svg class="ico" style="color:#fff"><use href="#i-cash"/></svg></div>
+                    <div class="num warm-text">1,4 млн</div>
+                    <div class="lbl">человек в месяц уже снимают наличные на кассе</div>
+                    <h3>Наличные на кассе</h3>
+                    <p>21% россиян не знают об услуге. Средний чек снятия около 2000 ₽: люди берут небольшие суммы на повседневные нужды.</p>
+                </div>
+                <div class="glass card-tall reveal" style="--d:4">
+                    <div class="icon-tile cool"><svg class="ico" style="color:#fff"><use href="#i-store"/></svg></div>
+                    <div class="num" style="color:var(--blue-soft)">B2B</div>
+                    <div class="lbl">партнёрская аудитория</div>
+                    <h3>Торговые сети</h3>
+                    <p>Сети с самообслуживанием или Scan&amp;Go. Подключение разгружает кассы, приводит трафик и повышает средний чек. Чем больше магазинов, тем ценнее продукт для покупателя.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 4. ПРОБЛЕМА 1 ============ -->
+    <section class="slide glow-a" aria-label="Проблема: очереди">
+        <div class="content">
+            <span class="kicker reveal">Проблема 01</span>
+            <h2 class="reveal" style="--d:1">Очереди отнимают<br>дни жизни</h2>
+            <div class="q-grid">
+                <div class="glass stat reveal" style="--d:2">
+                    <div class="num warm-text">≈7 дней</div>
+                    <div class="lbl">в году россияне проводят в очередях</div>
+                </div>
+                <div class="glass stat reveal" style="--d:3">
+                    <div class="num warm-text">27 ч</div>
+                    <div class="lbl">в год уходит только на очереди в кассу магазина</div>
+                </div>
+                <div class="glass hot q-side reveal" style="--d:4">
+                    <h3>2026: самостоятельная оплата впервые набрала больше половины</h3>
+                    <div class="split">
+                        <div><div class="head"><span>Сами оплачивают</span><b>55%</b></div><div class="bar" style="--p:55"><i></i></div></div>
+                        <div><div class="head"><span>Идут к кассиру</span><b>40%</b></div><div class="bar cool" style="--p:40"><i></i></div></div>
+                    </div>
+                    <p class="note">Даже самообслуживание требует финального шага: подойти к терминалу и оплатить. Очередь остаётся.</p>
+                </div>
+                <div class="glass stat reveal" style="--d:5">
+                    <div class="num">56%</div>
+                    <div class="lbl">называют большие очереди главным раздражителем при шопинге</div>
+                </div>
+                <div class="glass stat reveal" style="--d:6">
+                    <div class="num">52%</div>
+                    <div class="lbl">выбирают кассы самообслуживания, чтобы не стоять в очереди</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 5. ПРОБЛЕМА 2 ============ -->
+    <section class="slide glow-d" aria-label="Проблема: банкоматы">
+        <div class="content">
+            <span class="kicker reveal">Проблема 02</span>
+            <h2 class="reveal" style="--d:1">Банкоматов всё меньше</h2>
+            <div class="atm-grid">
+                <div class="atm-big">
+                    <div class="num warm-text reveal" style="--d:2">−100 тыс.</div>
+                    <div class="lbl reveal" style="--d:3">банкоматов с пика в 235,5 тыс. в 2014 году</div>
+                    <p class="reveal" style="--d:4">Банки выводят убыточные устройства из спальных районов и малых городов: инкассация и обслуживание терминалов стали невыгодны.</p>
+                    <p class="reveal" style="--d:5; color:var(--ink); font-weight:600">Доступность наличных через привычную инфраструктуру падает, а потребность в них остаётся.</p>
+                </div>
+                <div class="glass hot per-1000 reveal" style="--d:3">
+                    <h3>На 1000 жителей</h3>
+                    <div class="row">
+                        <div><div class="v">1,6</div><div class="k">кассы</div></div>
+                        <div class="blocks"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                    </div>
+                    <div class="row">
+                        <div><div class="v" style="color:var(--blue-soft)">0,2</div><div class="k">банкомата</div></div>
+                        <div class="blocks atm"><i></i></div>
+                    </div>
+                    <div class="x8">
+                        <b class="warm-text">×8</b>
+                        <p>касс больше, чем банкоматов</p>
+                    </div>
+                    <p class="src" style="margin-top:18px">Банк России, II квартал 2026</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 6. ПРОБЛЕМА 3 ============ -->
+    <section class="slide glow-b" aria-label="Проблема: наличные на кассе">
+        <div class="content">
+            <span class="kicker reveal">Проблема 03</span>
+            <h2 class="reveal" style="--d:1">Наличные на кассе<br>растут стихийно</h2>
+            <div class="cash-grid">
+                <div class="cash-stats">
+                    <div class="glass stat reveal" style="--d:2">
+                        <div class="num warm-text">+16–17%</div>
+                        <div class="lbl">в год растёт объём выдачи через торговые сети</div>
+                    </div>
+                    <div class="glass stat reveal" style="--d:3">
+                        <div class="num">43 тыс.+</div>
+                        <div class="lbl">точек выдачи наличных</div>
+                    </div>
+                </div>
+                <div class="glass steps reveal" style="--d:4">
+                    <h3>Как это работает сейчас</h3>
+                    <div class="step"><span class="n">1</span><p>Покупатель устно называет кассиру сумму</p></div>
+                    <div class="step"><span class="n">2</span><p>Кассир добавляет её к чеку</p></div>
+                    <div class="step"><span class="n">3</span><p>Покупатель подтверждает картой</p></div>
+                    <div class="verdict">Ручная операция внутри чужого процесса. В цифровой сценарий покупки она не встроена.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 7. ЗАМКНУТЫЙ КОНТУР ============ -->
+    <section class="slide glow-c" aria-label="Взаимосвязь проблем">
+        <div class="content">
+            <span class="kicker reveal">Взаимосвязь проблем</span>
+            <h2 class="reveal" style="--d:1">Замкнутый контур</h2>
+        </div>
+        <div class="loop" style="z-index:1">
+            <svg class="ring-path reveal" style="--d:2" viewBox="0 0 600 600" aria-hidden="true">
+                <circle cx="300" cy="300" r="300" fill="none" stroke="url(#gWarm)" stroke-width="2.5" stroke-dasharray="6 12"/>
+            </svg>
+            <div class="node glass reveal" style="left:450px; top:80px; --d:3">
+                <h3>Очереди</h3><p>подталкивают к самообслуживанию</p>
+            </div>
+            <div class="node glass reveal" style="left:750px; top:380px; --d:4">
+                <h3>Самообслуживание</h3><p>уводит от обычной кассы</p>
+            </div>
+            <div class="node glass reveal" style="left:450px; top:680px; --d:5">
+                <h3>Касса</h3><p>именно там сейчас выдают наличные</p>
+            </div>
+            <div class="node glass reveal" style="left:150px; top:380px; --d:6">
+                <h3>Банкоматы исчезают</h3><p>банки перекладывают выдачу на ритейл</p>
+            </div>
+            <div class="center reveal" style="--d:7">
+                <div class="gap warm-text">РАЗРЫВ</div>
+                <p>Товар отсканирован, а&nbsp;наличные так же просто не&nbsp;получить</p>
+            </div>
+        </div>
+        <div class="loop-side" style="z-index:1">
+            <p class="lead reveal" style="--d:4">Ритейл получил функцию выдачи наличных, но удобного цифрового инструмента для неё нет. Цифровой сценарий покупки обрывается на этом шаге.</p>
+            <div class="glass hot answer reveal" style="--d:6">
+                <div class="tag">Наш ответ</div>
+                <h3>Встраиваем снятие наличных в единый цифровой поток Scan&nbsp;&amp;&nbsp;Go и Take&nbsp;&amp;&nbsp;Go</h3>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 8. УТП 1 ============ -->
+    <section class="slide glow-a" aria-label="Уникальность: единый кошелёк">
+        <div class="content usp">
+            <div>
+                <span class="kicker reveal">Уникальность 01</span>
+                <h2 class="reveal" style="--d:1">Единый кошелёк<br>и экосистема</h2>
+                <div class="glass hot quote reveal" style="--d:2">
+                    <span class="mark">“</span>
+                    <p>Единый супер-апп для ритейла: от входа в магазин до получения наличных.</p>
+                    <p style="font:400 24px/1.45 var(--font-body); color:var(--muted); margin-top:18px">Без сторонних приложений магазинов и очередей на кассах. Шопинг, оплата и банковские операции в одном интерфейсе.</p>
+                </div>
+                <div class="usp-feats">
+                    <div class="glass feat reveal" style="--d:3">
+                        <div class="icon-tile cool"><svg class="ico" style="color:#fff"><use href="#i-wallet"/></svg></div>
+                        <div><h3>Бесшовность</h3><p>Покупатель не переключается между приложением банка и приложением магазина</p></div>
+                    </div>
+                    <div class="glass feat reveal" style="--d:4">
+                        <div class="icon-tile"><svg class="ico" style="color:#fff"><use href="#i-tag"/></svg></div>
+                        <div><h3>Лояльность</h3><p>Скидки и бонусы магазина применяются при сканировании, карта лояльности на кассе не нужна</p></div>
+                    </div>
+                </div>
+            </div>
+            <div class="usp-phones">
+                <div class="phone reveal-phone float" style="position:absolute; right:60px; top:40px; --w:380px; --r:-4deg; --d:2; --phone-glow: rgba(47,107,255,.6)">
+                    <img src="assets/scr-takego.png" alt="Экран Take & Go">
+                </div>
+                <div class="eco">
+                    <div class="chip-float glass reveal" style="--d:4">
+                        <div class="icon-tile cool"><svg class="ico" style="color:#fff"><use href="#i-qr"/></svg></div>
+                        <div><div class="t1">Scan & Go</div><div class="t2">Сканируешь и платишь сам</div></div>
+                    </div>
+                    <div class="chip-float glass reveal" style="--d:5">
+                        <div class="icon-tile"><svg class="ico" style="color:#fff"><use href="#i-store"/></svg></div>
+                        <div><div class="t1">Take & Go</div><div class="t2">Корзина по камерам и датчикам</div></div>
+                    </div>
+                    <div class="chip-float glass hot reveal" style="--d:6">
+                        <div class="icon-tile"><svg class="ico" style="color:#fff"><use href="#i-cash"/></svg></div>
+                        <div><div class="t1">Наличные</div><div class="t2">Снятие на кассе</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 9. УТП 2 ============ -->
+    <section class="slide glow-d" aria-label="Уникальность: последняя миля">
+        <div class="content usp" style="grid-template-columns: 1fr 720px">
+            <div>
+                <span class="kicker reveal">Уникальность 02 · последняя миля</span>
+                <div class="mile-quote reveal" style="--d:1">Банк в кармане,<br><span class="warm-text">наличные —<br>на кассе</span></div>
+                <p class="reveal" style="--d:2; margin-top:30px; max-width:860px">Любая касса магазина становится мини-банкоматом. Наличные выдаются как остаток от покупки в один клик, без отдельной услуги.</p>
+                <div class="mile-row">
+                    <div class="glass bread reveal" style="--d:3">
+                        <div class="icon-tile cool"><svg class="ico" style="color:#fff"><use href="#i-cash"/></svg></div>
+                        <div>
+                            <div class="num warm-text">до 5000 ₽</div>
+                            <div class="lbl">наличными сверх покупки или вместо части оплаты картой</div>
+                        </div>
+                    </div>
+                    <div class="glass hot bread reveal" style="--d:4">
+                        <div class="icon-tile"><svg class="ico" style="color:#fff"><use href="#i-bread"/></svg></div>
+                        <div>
+                            <div class="t">Купил хлеб — снял 3000 рублей</div>
+                            <p style="font-size:21px; margin-top:12px">Не нужно идти к банкомату, а у магазина растёт трафик</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="usp-phones">
+                <div class="phone reveal-phone" style="position:absolute; left:30px; top:160px; --w:320px; --r:-6deg; --d:2; --phone-glow: rgba(47,107,255,.5)">
+                    <img src="assets/scr-cash.png" alt="Ввод суммы снятия">
+                </div>
+                <div class="phone reveal-phone float" style="position:absolute; right:0; top:70px; --w:350px; --r:5deg; --d:4">
+                    <img src="assets/scr-cash-ok.png" alt="Снятие выполнено">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 10. КАК ЭТО РАБОТАЕТ ============ -->
+    <section class="slide glow-b" aria-label="Сценарий покупки">
+        <div class="content">
+            <span class="kicker reveal">Прототип</span>
+            <h2 class="reveal" style="--d:1">Покупка без кассы</h2>
+            <div class="flow">
+                <div class="flow-item">
+                    <div class="phone reveal-phone" style="--w:268px; --d:2; --phone-glow: rgba(47,107,255,.5)"><img src="assets/scr-scango.png" alt="Scan & Go: QR магазина"></div>
+                    <div class="cap reveal" style="--d:3"><b>01</b><span>Сканируешь QR магазина у входа</span></div>
+                </div>
+                <div class="flow-item">
+                    <div class="phone reveal-phone" style="--w:268px; --d:3"><img src="assets/scr-cart.png" alt="Корзина"></div>
+                    <div class="cap reveal" style="--d:4"><b>02</b><span>Сканируешь штрихкоды товаров</span></div>
+                </div>
+                <div class="flow-item">
+                    <div class="phone reveal-phone" style="--w:268px; --d:4; --phone-glow: rgba(123,77,255,.55)"><img src="assets/scr-checkout.png" alt="Оплата"></div>
+                    <div class="cap reveal" style="--d:5"><b>03</b><span>Оплачиваешь проверенную корзину</span></div>
+                </div>
+                <div class="flow-item">
+                    <div class="phone reveal-phone" style="--w:268px; --d:5; --phone-glow: rgba(255,138,91,.6)"><img src="assets/scr-receipt.png" alt="Электронный чек"></div>
+                    <div class="cap reveal" style="--d:6"><b>04</b><span>Получаешь электронный чек</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 11. ТЕКУЩАЯ СТАДИЯ ============ -->
+    <section class="slide glow-c" aria-label="Текущая стадия">
+        <div class="content">
+            <span class="kicker reveal">Текущая стадия</span>
+            <h2 class="reveal" style="--d:1">Рабочий прототип</h2>
+            <div class="stage-grid">
+                <div class="glass hot reveal" style="--d:2">
+                    <h3>Сделано</h3>
+                    <ul class="check-list">
+                        <li><svg class="ico"><use href="#i-check"/></svg>Scan &amp; Go: карта точек, QR магазина, сканер EAN-13, корзина с версией, оплата с Face ID, статусы платежа, демо-чек</li>
+                        <li><svg class="ico"><use href="#i-check"/></svg>Снятие и пополнение по QR с экраном успешной операции</li>
+                        <li><svg class="ico"><use href="#i-check"/></svg>История покупок и минимальный возврат</li>
+                        <li><svg class="ico"><use href="#i-check"/></svg>Take &amp; Go во вкладках, профиль, документы, три демо-аккаунта, светлая и тёмная тема</li>
+                        <li><svg class="ico"><use href="#i-check"/></svg>Автотесты домена: идемпотентность оплаты, устаревшая корзина, потерянный ответ, возврат</li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="glass reveal" style="--d:3">
+                        <h3>Пока нет</h3>
+                        <ul class="check-list no">
+                            <li><svg class="ico"><use href="#i-x"/></svg>Живой кассы и фискального чека</li>
+                            <li><svg class="ico"><use href="#i-x"/></svg>Боевого процессинга</li>
+                            <li><svg class="ico"><use href="#i-x"/></svg>KYC и обязательств по SLA</li>
+                        </ul>
+                    </div>
+                    <div class="glass demo-card reveal" style="--d:4">
+                        <h3>Демо-панель</h3>
+                        <p>Долгое нажатие на «Pay &amp; Go» открывает режимы платежа и чека, действие кассира и каталог товаров прямо на телефоне.</p>
+                    </div>
+                </div>
+                <div class="phone reveal-phone" style="--w:330px; --d:4; --r:3deg; --phone-glow: rgba(47,107,255,.55)">
+                    <img src="assets/scr-account.png" alt="Экран карты: снять, пополнить, оплатить">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 12. ЦЕННОСТЬ ============ -->
+    <section class="slide glow-a" aria-label="Ценность">
+        <div class="content">
+            <span class="kicker reveal">Первичная оценка ценности</span>
+            <h2 class="reveal" style="--d:1">Выгодно трём сторонам</h2>
+            <div class="value-grid">
+                <div class="glass hot value reveal" style="--d:2">
+                    <div class="icon-tile"><svg class="ico" style="color:#fff"><use href="#i-user"/></svg></div>
+                    <div class="who">Клиент</div>
+                    <ul><li>Экономит время</li><li>Получает наличные там, где и так бывает</li></ul>
+                </div>
+                <div class="glass value reveal" style="--d:3">
+                    <div class="icon-tile cool"><svg class="ico" style="color:#fff"><use href="#i-bank"/></svg></div>
+                    <div class="who">Банк</div>
+                    <ul><li>Тратит меньше на инфраструктуру</li><li>Получает больше транзакций</li></ul>
+                </div>
+                <div class="glass value reveal" style="--d:4">
+                    <div class="icon-tile"><svg class="ico" style="color:#fff"><use href="#i-store"/></svg></div>
+                    <div class="who">Магазин</div>
+                    <ul><li>Больше трафика</li><li>Выше средний чек</li><li>Свободнее кассы</li></ul>
+                </div>
+            </div>
+            <div class="glass first reveal" style="--d:5">
+                <div class="icon-tile cool"><svg class="ico" style="color:#fff"><use href="#i-spark"/></svg></div>
+                <p>Scan &amp; Go, Take &amp; Go и снятие наличных собраны в один сценарий покупки внутри банковского приложения.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 13. ROADMAP ============ -->
+    <section class="slide glow-d" aria-label="План развития">
+        <div class="content">
+            <span class="kicker reveal">План развития и внедрения</span>
+            <h2 class="reveal" style="--d:1">От хакатона к платформе</h2>
+            <div class="road">
+                <div class="road-line"><i></i></div>
+                <div class="road-grid">
+                    <div class="road-item reveal" style="--d:2">
+                        <div class="road-dot">1</div>
+                        <div class="glass hot road-card">
+                            <div class="when">3–5 дней</div>
+                            <h3>MVP</h3>
+                            <p>Сквозной сценарий: сканирование, оплата, снятие наличных. Песочница банка, мок POS-системы.</p>
+                            <div class="kpi"><span>Результат</span>Демо на хакатоне</div>
+                        </div>
+                    </div>
+                    <div class="road-item reveal" style="--d:3">
+                        <div class="road-dot">2</div>
+                        <div class="glass road-card">
+                            <div class="when">3–6 месяцев</div>
+                            <h3>Пилот</h3>
+                            <p>3–5 магазинов одной сети. Интеграция с POS, защита от краж, легальная выдача наличных.</p>
+                            <div class="kpi"><span>Критерий</span>5+ операций на магазин в день, удовлетворённость выше 70%</div>
+                        </div>
+                    </div>
+                    <div class="road-item reveal" style="--d:4">
+                        <div class="road-dot">3</div>
+                        <div class="glass road-card">
+                            <div class="when">6–12 месяцев</div>
+                            <h3>Масштаб</h3>
+                            <p>50+ магазинов, операционные стандарты, обучение кассиров, продакшн-инфраструктура, переговоры с банками-партнёрами.</p>
+                            <div class="kpi"><span>Критерий</span>10 000+ пользователей в месяц</div>
+                        </div>
+                    </div>
+                    <div class="road-item reveal" style="--d:5">
+                        <div class="road-dot">4</div>
+                        <div class="glass road-card">
+                            <div class="when">12–24 месяца</div>
+                            <h3>Платформа</h3>
+                            <p>Другие сети и банки через API. Больше магазинов делает приложение ценнее, больше пользователей делает его выгоднее магазинам.</p>
+                            <div class="kpi"><span>Критерий</span>3+ сети, оборот в десятки миллионов</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 14. ФИНАЛ ============ -->
+    <section class="slide glow-a" aria-label="Финал">
+        <div class="content final">
+            <img class="reveal" src="assets/logo.png" alt="Логотип Pay & Go">
+            <h1 class="reveal" style="--d:1">Pay & Go</h1>
+            <p class="reveal" style="--d:3">Спасибо! Покажем прототип вживую.</p>
+        </div>
+    </section>
+
+</main>
+</div>
+
+<div class="progress" id="progress"></div>
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Режим редактирования (E)" aria-label="Режим редактирования">✎</button>
+
+<script>
+/* ===========================================
+   SLIDE PRESENTATION CONTROLLER
+   Стрелки, пробел, PageUp/PageDown, Home/End,
+   колесо мыши, свайпы. Сцена 1920×1080 масштабируется целиком.
+   =========================================== */
+class SlidePresentation {
+    constructor() {
+        this.stage = document.getElementById('deckStage');
+        this.slides = [...this.stage.querySelectorAll('.slide')];
+        this.progress = document.getElementById('progress');
+        this.current = 0;
+        this.injectChrome();
+        this.setupStageScale();
+        this.setupKeyboardNav();
+        this.setupWheelNav();
+        this.setupTouchNav();
+        this.setupHashNav();
+        this.show(this.indexFromHash());
+    }
+
+    indexFromHash() {
+        const n = Number(location.hash.slice(1));
+        if (Number.isFinite(n) && n >= 1 && n <= this.slides.length) return n - 1;
+        return 0;
+    }
+
+    setupHashNav() {
+        addEventListener('hashchange', () => this.show(this.indexFromHash()));
+    }
+
+    injectChrome() {
+        const logo = 'assets/logo.png';
+        this.slides.forEach((slide, i) => {
+            const chrome = document.createElement('div');
+            chrome.className = 'chrome';
+            const dots = this.slides.map((_, j) => `<i class="${i === j ? 'on' : ''}"></i>`).join('');
+            const mark = i === 0 || i === this.slides.length - 1
+                ? ''
+                : `<div class="wordmark"><img src="${logo}" alt="">PAY & GO</div>`;
+            chrome.innerHTML = `<div class="corner-line"></div><div class="dots">${dots}</div>${mark}`;
+            slide.appendChild(chrome);
+        });
+    }
+
+    setupStageScale() {
+        const scale = () => {
+            const f = Math.min(innerWidth / 1920, innerHeight / 1080);
+            const x = (innerWidth - 1920 * f) / 2;
+            const y = (innerHeight - 1080 * f) / 2;
+            this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+        };
+        scale();
+        addEventListener('resize', scale);
+    }
+
+    setupKeyboardNav() {
+        document.addEventListener('keydown', (e) => {
+            if (e.target.isContentEditable) return;
+            const next = ['ArrowRight', 'ArrowDown', ' ', 'PageDown'];
+            const prev = ['ArrowLeft', 'ArrowUp', 'PageUp'];
+            if (next.includes(e.key)) { e.preventDefault(); this.show(this.current + 1); }
+            else if (prev.includes(e.key)) { e.preventDefault(); this.show(this.current - 1); }
+            else if (e.key === 'Home') this.show(0);
+            else if (e.key === 'End') this.show(this.slides.length - 1);
+        });
+    }
+
+    setupWheelNav() {
+        let locked = false;
+        addEventListener('wheel', (e) => {
+            if (locked || Math.abs(e.deltaY) < 20 || document.body.classList.contains('editing')) return;
+            locked = true;
+            this.show(this.current + (e.deltaY > 0 ? 1 : -1));
+            setTimeout(() => { locked = false; }, 800);
+        }, { passive: true });
+    }
+
+    setupTouchNav() {
+        let x0 = null;
+        addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+        addEventListener('touchend', (e) => {
+            if (x0 === null) return;
+            const dx = e.changedTouches[0].clientX - x0;
+            if (Math.abs(dx) > 50) this.show(this.current + (dx < 0 ? 1 : -1));
+            x0 = null;
+        });
+    }
+
+    show(index) {
+        this.current = Math.max(0, Math.min(index, this.slides.length - 1));
+        this.slides.forEach((s, i) => {
+            const on = i === this.current;
+            s.classList.toggle('active', on);
+            s.classList.toggle('visible', on);
+            s.setAttribute('aria-hidden', String(!on));
+        });
+        this.progress.style.width = `${((this.current + 1) / this.slides.length) * 100}%`;
+        history.replaceState(null, '', `#${this.current + 1}`);
+    }
+}
+
+/* ===========================================
+   INLINE EDITOR
+   E или клик в левом верхнем углу. Правки
+   сохраняются в localStorage, Ctrl/Cmd+S скачивает HTML.
+   =========================================== */
+class InlineEditor {
+    constructor() {
+        this.key = 'pay-and-go-deck-edits';
+        this.selector = '.slide h1, .slide h2, .slide h3, .slide p, .slide li, .slide .num, .slide .lbl, .slide .pill, .slide .kicker, .slide .big, .slide .sub, .slide .t, .slide .t1, .slide .t2, .slide .who, .slide .when, .slide .kpi, .slide .mile-quote, .slide .cap span';
+        this.nodes = [...document.querySelectorAll(this.selector)];
+        this.isActive = false;
+        this.toggle = document.getElementById('editToggle');
+        this.restore();
+        this.bind();
+    }
+
+    restore() {
+        const saved = JSON.parse(localStorage.getItem(this.key) || '{}');
+        Object.entries(saved).forEach(([i, html]) => { if (this.nodes[i]) this.nodes[i].innerHTML = html; });
+    }
+
+    save() {
+        const data = {};
+        this.nodes.forEach((n, i) => { data[i] = n.innerHTML; });
+        localStorage.setItem(this.key, JSON.stringify(data));
+    }
+
+    toggleEditMode() {
+        this.isActive = !this.isActive;
+        document.body.classList.toggle('editing', this.isActive);
+        this.toggle.classList.toggle('active', this.isActive);
+        this.nodes.forEach((n) => n.setAttribute('contenteditable', String(this.isActive)));
+        if (!this.isActive) this.save();
+    }
+
+    exportHtml() {
+        if (this.isActive) this.toggleEditMode();
+        const doc = document.documentElement.cloneNode(true);
+        doc.querySelectorAll('.chrome').forEach((c) => c.remove());
+        doc.querySelectorAll('[contenteditable]').forEach((n) => n.removeAttribute('contenteditable'));
+        const html = '<!DOCTYPE html>\n' + doc.outerHTML;
+        const a = Object.assign(document.createElement('a'), {
+            href: URL.createObjectURL(new Blob([html], { type: 'text/html' })),
+            download: 'pay-and-go.html',
+        });
+        a.click();
+    }
+
+    bind() {
+        const hotzone = document.querySelector('.edit-hotzone');
+        let hideTimeout = null;
+        const hideLater = () => {
+            hideTimeout = setTimeout(() => { if (!this.isActive) this.toggle.classList.remove('show'); }, 400);
+        };
+        hotzone.addEventListener('mouseenter', () => { clearTimeout(hideTimeout); this.toggle.classList.add('show'); });
+        hotzone.addEventListener('mouseleave', hideLater);
+        this.toggle.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
+        this.toggle.addEventListener('mouseleave', hideLater);
+        hotzone.addEventListener('click', () => this.toggleEditMode());
+        this.toggle.addEventListener('click', () => this.toggleEditMode());
+
+        document.addEventListener('input', () => this.save());
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === 'e' || e.key === 'E') && !e.target.isContentEditable) this.toggleEditMode();
+            if (e.key === 'Escape' && this.isActive) this.toggleEditMode();
+            if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); this.exportHtml(); }
+        });
+    }
+}
+
+const __payGoDeck = new SlidePresentation();
+window.__payGoDeck = __payGoDeck;
+new InlineEditor();
+</script>
+</body>
+</html>

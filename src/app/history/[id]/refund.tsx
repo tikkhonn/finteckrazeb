@@ -5,9 +5,10 @@ import { Alert, Text } from 'react-native';
 import { isVtbGoError } from '@/domain/errors';
 import { formatRub } from '@/domain/money';
 import { usePurchase, useRequestRefund } from '@/queries/hooks';
-import { Button, Card, Screen, colors } from '@/ui';
+import { Button, Card, Screen, useTheme } from '@/ui';
 
 export default function RefundScreen() {
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data } = usePurchase(id);
   const request = useRequestRefund(id);
@@ -32,7 +33,7 @@ export default function RefundScreen() {
   if (!data) {
     return (
       <Screen>
-        <Text>Загружаем…</Text>
+        <Text style={{ color: colors.textMuted }}>Загружаем…</Text>
       </Screen>
     );
   }

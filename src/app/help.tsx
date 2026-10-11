@@ -1,8 +1,9 @@
 import { Text } from 'react-native';
 
-import { Card, Screen, colors } from '@/ui';
+import { Card, Screen, useTheme } from '@/ui';
 
 export default function HelpScreen() {
+  const { colors } = useTheme();
   return (
     <Screen>
       <Text style={{ fontSize: 22, fontWeight: '700', color: colors.text }}>Проблема с покупкой</Text>

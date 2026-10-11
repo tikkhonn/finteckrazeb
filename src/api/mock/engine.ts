@@ -1,5 +1,6 @@
 import catalogData from './catalog.json';
 import { withTotals } from '@/domain/cart';
+import { assertEan13 } from '@/domain/ean';
 import { VtbGoError } from '@/domain/errors';
 import { assertTransition, EDITABLE_STATUSES, PURCHASE_HISTORY_STATUSES } from '@/domain/stateMachine';
 import type {
@@ -19,10 +20,10 @@ import type {
   Store,
 } from '@/domain/types';
 import type { PayRequest } from '@/api/contract';
-import { findStoreByQr, STORES } from './stores';
+import { findStoreById, findStoreByQr, STORES } from './stores';
 import { emptyState, type MockState } from './state';
 
-const CATALOG = catalogData as CatalogItem[];
+const SEED_CATALOG = catalogData as CatalogItem[];
 const RECEIPT_DELAY_MS = 4000;
 const PAYMENT_DELAY_MS = 5000;
 const LOST_REVEAL_MS = 8000;
@@ -32,10 +33,15 @@ export interface EngineDeps {
   getSim: () => SimulatorConfig;
 }
 
+export function seedCatalog(): CatalogItem[] {
+  return SEED_CATALOG.map((item) => ({ ...item }));
+}
+
 export class MockEngine {
   constructor(
     public state: MockState,
     private readonly deps: EngineDeps,
+    public catalog: CatalogItem[] = seedCatalog(),
   ) {}
 
   static create(deps: EngineDeps, state?: MockState): MockEngine {
@@ -43,7 +49,37 @@ export class MockEngine {
   }
 
   getCatalog(): CatalogItem[] {
-    return [...CATALOG];
+    return this.catalog.map((item) => ({ ...item }));
+  }
+
+  upsertCatalogItem(input: CatalogItem): CatalogItem {
+    const name = input.name.trim();
+    if (!name) {
+      throw new VtbGoError('INVALID_CATALOG_ITEM', 'Укажите название товара.');
+    }
+    if (!Number.isFinite(input.price) || input.price <= 0) {
+      throw new VtbGoError('INVALID_CATALOG_ITEM', 'Цена должна быть больше нуля.');
+    }
+    const item: CatalogItem = {
+      barcode: assertEan13(input.barcode),
+      name,
+      price: Math.round(input.price * 100) / 100,
+    };
+    const index = this.catalog.findIndex((entry) => entry.barcode === item.barcode);
+    if (index >= 0) {
+      this.catalog[index] = item;
+    } else {
+      this.catalog.push(item);
+    }
+    return { ...item };
+  }
+
+  deleteCatalogItem(barcode: string): void {
+    this.catalog = this.catalog.filter((item) => item.barcode !== barcode);
+  }
+
+  resetCatalogToSeed(): void {
+    this.catalog = seedCatalog();
   }
 
   listStores(): Store[] {
@@ -67,7 +103,7 @@ export class MockEngine {
   }
 
   startSession(storeId: string): Session {
-    const store = STORES.find((item) => item.id === storeId);
+    const store = findStoreById(storeId);
     if (!store) {
       throw new VtbGoError('STORE_NOT_FOUND', 'Магазин не найден.');
     }
@@ -95,7 +131,14 @@ export class MockEngine {
     this.tick(sessionId);
     const session = this.requireSession(sessionId);
     this.assertEditable(session);
-    const product = CATALOG.find((item) => item.barcode === barcode.trim());
+    let code: string;
+    try {
+      code = assertEan13(barcode);
+    } catch (error) {
+      this.record(sessionId, 'invalid_barcode', actor === 'cashier' ? 'store' : 'customer', barcode);
+      throw error;
+    }
+    const product = this.catalog.find((item) => item.barcode === code);
     if (!product) {
       this.record(sessionId, 'item_not_found', actor === 'cashier' ? 'store' : 'customer', barcode);
       throw new VtbGoError('ITEM_NOT_FOUND', 'Товар не найден. Обратитесь к сотруднику.');

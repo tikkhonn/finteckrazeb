@@ -2,7 +2,7 @@ import { Text, View } from 'react-native';
 
 import type { CartDiff } from '@/domain/cart';
 import { formatRub } from '@/domain/money';
-import { BottomSheet, Button, colors, spacing } from '@/ui';
+import { BottomSheet, Button, spacing, useTheme } from '@/ui';
 
 interface CartDiffSheetProps {
   visible: boolean;
@@ -11,6 +11,7 @@ interface CartDiffSheetProps {
 }
 
 export function CartDiffSheet({ visible, diff, onAck }: CartDiffSheetProps) {
+  const { colors } = useTheme();
   if (!diff) {
     return null;
   }

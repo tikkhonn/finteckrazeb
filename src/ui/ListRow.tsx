@@ -1,29 +1,42 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, spacing } from './tokens';
+import { useTheme } from './theme';
+import { spacing } from './tokens';
 
 interface ListRowProps {
   title: string;
   subtitle?: string;
   right?: ReactNode;
+  chevron?: boolean;
   onPress?: () => void;
 }
 
-export function ListRow({ title, subtitle, right, onPress }: ListRowProps) {
+export function ListRow({ title, subtitle, right, chevron, onPress }: ListRowProps) {
+  const { colors } = useTheme();
   const content = (
     <View style={styles.row}>
       <View style={styles.text}>
-        <Text style={styles.title}>{title}</Text>
-        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+        {subtitle ? (
+          <Text style={[styles.subtitle, { color: colors.textMuted }]} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        ) : null}
       </View>
       {right ? <View>{right}</View> : null}
+      {chevron ? <Text style={[styles.chevron, { color: colors.textMuted }]}>›</Text> : null}
     </View>
   );
 
   if (onPress) {
     return (
-      <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        onPress={onPress}
+        style={({ pressed }) => (pressed ? styles.pressed : null)}
+      >
         {content}
       </Pressable>
     );
@@ -40,7 +53,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   text: { flex: 1, gap: 2 },
-  title: { fontSize: 16, fontWeight: '600', color: colors.text },
-  subtitle: { fontSize: 13, color: colors.textMuted },
+  title: { fontSize: 15, fontWeight: '600' },
+  subtitle: { fontSize: 12 },
+  chevron: { fontSize: 22, lineHeight: 24, fontWeight: '500' },
   pressed: { opacity: 0.7 },
 });

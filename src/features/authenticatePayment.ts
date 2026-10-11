@@ -1,6 +1,8 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 
-export async function authenticatePayment(): Promise<boolean> {
+import { usePrefsStore } from '@/store/prefsStore';
+
+export async function promptBiometrics(message: string): Promise<boolean> {
   try {
     const hasHardware = await LocalAuthentication.hasHardwareAsync();
     const enrolled = await LocalAuthentication.isEnrolledAsync();
@@ -8,7 +10,7 @@ export async function authenticatePayment(): Promise<boolean> {
       return true;
     }
     const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Подтвердите оплату этой корзины',
+      promptMessage: message,
       fallbackLabel: 'Подтвердить кодом',
       cancelLabel: 'Отмена',
     });
@@ -16,4 +18,11 @@ export async function authenticatePayment(): Promise<boolean> {
   } catch {
     return true;
   }
+}
+
+export async function authenticatePayment(): Promise<boolean> {
+  if (!usePrefsStore.getState().faceIdEnabled) {
+    return true;
+  }
+  return promptBiometrics('Подтвердите оплату этой корзины');
 }

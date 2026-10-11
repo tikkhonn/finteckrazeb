@@ -1,27 +1,44 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
-import { Button, colors, spacing } from '@/ui';
+import { Button, spacing, useTheme } from '@/ui';
 
 interface BarcodeScannerProps {
   onScan: (value: string) => void;
   hint: string;
 }
 
+/** На телефоне — камера и авто-скан. В браузере — только подсказка, без доступа к камере Mac. */
 export function BarcodeScanner({ onScan, hint }: BarcodeScannerProps) {
+  const { colors } = useTheme();
+  if (Platform.OS === 'web') {
+    return (
+      <Text style={[styles.hint, { color: colors.textMuted }]}>
+        {hint}. В браузере введите код в поле ниже.
+      </Text>
+    );
+  }
+
+  return <BarcodeScannerNative onScan={onScan} hint={hint} />;
+}
+
+function BarcodeScannerNative({ onScan, hint }: BarcodeScannerProps) {
+  const { colors } = useTheme();
   const [permission, requestPermission] = useCameraPermissions();
   const lock = useRef(false);
   const [ready, setReady] = useState(true);
 
   if (!permission) {
-    return <Text style={styles.hint}>Проверяем доступ к камере…</Text>;
+    return <Text style={[styles.hint, { color: colors.textMuted }]}>Проверяем доступ к камере…</Text>;
   }
 
   if (!permission.granted) {
     return (
       <View style={styles.fallback}>
-        <Text style={styles.hint}>Нужен доступ к камере, чтобы сканировать коды.</Text>
+        <Text style={[styles.hint, { color: colors.textMuted }]}>
+          Нужен доступ к камере, чтобы сканировать коды.
+        </Text>
         <Button title="Разрешить камеру" onPress={() => void requestPermission()} />
       </View>
     );
@@ -48,7 +65,7 @@ export function BarcodeScanner({ onScan, hint }: BarcodeScannerProps) {
           }, 1600);
         }}
       />
-      <Text style={styles.hint}>{hint}</Text>
+      <Text style={[styles.hint, { color: colors.textMuted }]}>{hint}</Text>
     </View>
   );
 }
@@ -61,6 +78,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#000',
   },
-  hint: { color: colors.textMuted, fontSize: 13, textAlign: 'center' },
+  hint: { fontSize: 13, textAlign: 'center' },
   fallback: { gap: spacing.md },
 });

@@ -1,13 +1,15 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { isVtbGoError } from '@/domain/errors';
-import { formatRub } from '@/domain/money';
+import { PurchaseSuccessHeader } from '@/features/PurchaseSuccessHeader';
+import { ReceiptPendingCard } from '@/features/ReceiptPendingCard';
 import { usePay, useSession } from '@/queries/hooks';
-import { Button, Screen, StatusBadge, colors, spacing } from '@/ui';
+import { AnimatedEnter, Button, Card, Screen, StatusBadge, spacing, useTheme } from '@/ui';
 
 export default function PaymentStatusScreen() {
+  const { colors } = useTheme();
   const { id, key } = useLocalSearchParams<{ id: string; key?: string }>();
   const sessionQuery = useSession(id, { poll: true });
   const pay = usePay(id);
@@ -43,7 +45,7 @@ export default function PaymentStatusScreen() {
 
   if (!session) {
     return (
-      <Screen>
+      <Screen background="sky">
         <ActivityIndicator color={colors.primary} />
       </Screen>
     );
@@ -51,35 +53,40 @@ export default function PaymentStatusScreen() {
 
   if (session.status === 'declined') {
     return (
-      <Screen>
-        <StatusBadge status="declined" />
-        <Text style={{ fontSize: 22, fontWeight: '700', color: colors.text }}>Банк отклонил оплату</Text>
-        <Text style={{ color: colors.textMuted }}>
-          Деньги не списаны. Можно выбрать другой способ и подтвердить ещё раз.
-        </Text>
-        <Button title="Вернуться к оплате" onPress={() => router.replace(`/session/${id}/checkout`)} />
+      <Screen background="sky">
+        <AnimatedEnter index={0}>
+          <StatusBadge status="declined" />
+          <Text style={[styles.headline, { color: colors.text }]}>Банк отклонил оплату</Text>
+          <Text style={[styles.muted, { color: colors.textMuted }]}>
+            Деньги не списаны. Можно выбрать другой способ и подтвердить ещё раз.
+          </Text>
+          <Button title="Вернуться к оплате" onPress={() => router.replace(`/session/${id}/checkout`)} />
+        </AnimatedEnter>
       </Screen>
     );
   }
 
   if (session.status === 'paid_awaiting_receipt') {
     return (
-      <Screen>
-        <StatusBadge status="paid_awaiting_receipt" />
-        <Text style={{ fontSize: 22, fontWeight: '700', color: colors.text }}>Оплата прошла</Text>
-        <Text style={{ color: colors.textMuted }}>
-          Завершаем оформление покупки. Чек появится, когда касса магазина его сформирует.
-        </Text>
-        <Text style={{ color: colors.text }}>{formatRub(session.cart.total)}</Text>
-        <ActivityIndicator color={colors.primary} />
+      <Screen background="sky" edges={['bottom']}>
+        <AnimatedEnter index={0}>
+          <PurchaseSuccessHeader
+            total={session.cart.total}
+            storeName={session.storeName}
+            paidAt={session.updatedAt}
+          />
+        </AnimatedEnter>
+        <AnimatedEnter index={1}>
+          <ReceiptPendingCard storeName={session.storeName} total={session.cart.total} />
+        </AnimatedEnter>
       </Screen>
     );
   }
 
   if (session.status === 'completed') {
     return (
-      <Screen>
-        <Text style={{ color: colors.textMuted }}>Переходим к чеку…</Text>
+      <Screen background="sky">
+        <Text style={[styles.muted, { color: colors.textMuted }]}>Переходим к чеку…</Text>
       </Screen>
     );
   }
@@ -87,26 +94,37 @@ export default function PaymentStatusScreen() {
   const unknown = session.status === 'payment_unknown';
 
   return (
-    <Screen>
-      <StatusBadge status={session.status} />
-      <Text style={{ fontSize: 22, fontWeight: '700', color: colors.text }}>
-        {unknown ? 'Проверяем статус оплаты' : 'Оплата обрабатывается'}
-      </Text>
-      <Text style={{ color: colors.textMuted }}>
-        Это ещё не успешная покупка. Повторный запрос не создаёт новое списание — мы спрашиваем
-        результат той же операции.
-      </Text>
-      <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
-        <ActivityIndicator color={colors.primary} />
-        {unknown ? (
-          <Button
-            title="Повторить запрос"
-            variant="secondary"
-            loading={pay.isPending}
-            onPress={() => void retry()}
-          />
-        ) : null}
-      </View>
+    <Screen background="sky">
+      <AnimatedEnter index={0}>
+        <StatusBadge status={session.status} />
+        <Text style={[styles.headline, { color: colors.text }]}>
+          {unknown ? 'Проверяем статус оплаты' : 'Оплата обрабатывается'}
+        </Text>
+        <Card variant="elevated">
+          <Text style={[styles.muted, { color: colors.textMuted }]}>
+            Это ещё не успешная покупка. Повторный запрос не создаёт новое списание — мы спрашиваем
+            результат той же операции.
+          </Text>
+          <View style={styles.spinnerRow}>
+            <ActivityIndicator color={colors.primary} />
+            {unknown ? (
+              <Button
+                title="Повторить запрос"
+                variant="secondary"
+                loading={pay.isPending}
+                onPress={() => void retry()}
+              />
+            ) : null}
+          </View>
+        </Card>
+      </AnimatedEnter>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  headline: { fontSize: 22, fontWeight: '700' },
+  muted: { fontSize: 15, fontWeight: '400', lineHeight: 22 },
+  amount: { fontSize: 20, fontWeight: '700' },
+  spinnerRow: { gap: spacing.sm, marginTop: spacing.lg },
+});

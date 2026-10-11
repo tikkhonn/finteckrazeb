@@ -1,13 +1,14 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Alert, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CartItemRow } from '@/features/CartItemRow';
 import { isVtbGoError } from '@/domain/errors';
 import { useCancelSession, useFinalizeCart, useSession, useUpdateQty } from '@/queries/hooks';
 import { useUiStore } from '@/store/uiStore';
-import { Amount, Button, Screen, colors } from '@/ui';
+import { Amount, AnimatedEnter, Button, Card, Screen, spacing, useTheme } from '@/ui';
 
 export default function CartScreen() {
+  const { colors, typography } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const sessionQuery = useSession(id, { poll: true });
   const updateQty = useUpdateQty(id);
@@ -30,8 +31,8 @@ export default function CartScreen() {
 
   if (!session) {
     return (
-      <Screen>
-        <Text style={{ color: colors.textMuted }}>Загружаем корзину…</Text>
+      <Screen background="sky">
+        <Text style={[styles.muted, { color: colors.textMuted }]}>Загружаем корзину…</Text>
       </Screen>
     );
   }
@@ -40,15 +41,16 @@ export default function CartScreen() {
 
   return (
     <Screen
+      background="sky"
       footer={
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: spacing.sm }}>
           <Button
             title="Сканировать товар"
             onPress={() => router.push(`/session/${id}/scan-item`)}
             disabled={!editable}
           />
           <Button
-            title="Завершить покупку"
+            title="К оплате"
             variant="secondary"
             onPress={() => void complete()}
             loading={finalize.isPending}
@@ -57,47 +59,76 @@ export default function CartScreen() {
         </View>
       }
     >
-      <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text }}>{session.storeName}</Text>
-      <Text style={{ color: colors.textMuted }}>Ваша корзина</Text>
+      <AnimatedEnter index={0}>
+        <Text style={typography.h2}>{session.storeName}</Text>
+        <Text style={[styles.muted, { color: colors.textMuted }]}>Ваша корзина</Text>
+      </AnimatedEnter>
 
-      {session.cart.items.length === 0 ? (
-        <Text style={{ color: colors.textMuted }}>Отсканируйте первый товар</Text>
-      ) : (
-        session.cart.items.map((item) => (
-          <CartItemRow
-            key={item.id}
-            item={item}
-            editable={editable}
-            onInc={() => updateQty.mutate({ itemId: item.id, qty: item.qty + 1 })}
-            onDec={() => updateQty.mutate({ itemId: item.id, qty: item.qty - 1 })}
-          />
-        ))
-      )}
+      <AnimatedEnter index={1}>
+        <Card variant="elevated">
+          {session.cart.items.length === 0 ? (
+            <View style={styles.empty}>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>Корзина пока пуста</Text>
+              <Text style={[styles.mutedSmall, { color: colors.textMuted }]}>
+                Нажмите «Сканировать товар» и наведите камеру на штрихкод — товар появится здесь.
+              </Text>
+            </View>
+          ) : (
+            session.cart.items.map((item, index) => (
+              <CartItemRow
+                key={item.id}
+                item={item}
+                index={index}
+                editable={editable}
+                onInc={() => updateQty.mutate({ itemId: item.id, qty: item.qty + 1 })}
+                onDec={() => updateQty.mutate({ itemId: item.id, qty: item.qty - 1 })}
+              />
+            ))
+          )}
+        </Card>
+      </AnimatedEnter>
 
-      <View>
-        <Text style={{ color: colors.textMuted }}>Итого</Text>
-        <Amount value={session.cart.total} />
-        <Text style={{ color: colors.textMuted }}>
-          Окончательная сумма будет проверена перед оплатой
-        </Text>
-      </View>
+      <AnimatedEnter index={2}>
+        <Card variant="elevated">
+          <Text style={[styles.muted, { color: colors.textMuted }]}>Итого</Text>
+          <Amount value={session.cart.total} />
+          <Text style={[styles.mutedSmall, { color: colors.textMuted }]}>
+            Окончательная сумма будет проверена перед оплатой
+          </Text>
+        </Card>
+      </AnimatedEnter>
 
-      <Button
-        title="Передумал"
-        variant="ghost"
-        onPress={() => {
-          Alert.alert('Отменить покупку?', 'Сессия будет закрыта', [
-            { text: 'Нет', style: 'cancel' },
-            {
-              text: 'Отменить',
-              style: 'destructive',
-              onPress: () => {
-                void cancel.mutateAsync().then(() => router.replace('/'));
-              },
-            },
-          ]);
-        }}
-      />
+      {editable ? (
+        <AnimatedEnter index={3}>
+          <Pressable
+            accessibilityRole="button"
+            style={styles.cancel}
+            onPress={() => {
+              Alert.alert('Отменить покупку?', 'Корзина очистится, оплаты не будет.', [
+                { text: 'Продолжить покупку', style: 'cancel' },
+                {
+                  text: 'Отменить',
+                  style: 'destructive',
+                  onPress: () => {
+                    void cancel.mutateAsync().then(() => router.replace('/scan-and-go'));
+                  },
+                },
+              ]);
+            }}
+          >
+            <Text style={[styles.cancelText, { color: colors.danger }]}>Отменить покупку</Text>
+          </Pressable>
+        </AnimatedEnter>
+      ) : null}
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  muted: { fontSize: 15, fontWeight: '400' },
+  mutedSmall: { fontSize: 13, lineHeight: 18 },
+  empty: { gap: spacing.xs, paddingVertical: spacing.sm },
+  emptyTitle: { fontSize: 15, fontWeight: '600' },
+  cancel: { alignSelf: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
+  cancelText: { fontSize: 14, fontWeight: '600' },
+});

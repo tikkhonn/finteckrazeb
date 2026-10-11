@@ -3,9 +3,10 @@ import { Text } from 'react-native';
 
 import { formatRub } from '@/domain/money';
 import { usePurchases } from '@/queries/hooks';
-import { Card, ListRow, Screen, StatusBadge, colors } from '@/ui';
+import { Card, ListRow, Screen, StatusBadge, useTheme } from '@/ui';
 
 export default function HistoryScreen() {
+  const { colors } = useTheme();
   const { data, isLoading } = usePurchases();
 
   return (

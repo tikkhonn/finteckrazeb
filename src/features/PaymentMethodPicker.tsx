@@ -1,13 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { PaymentMethod } from '@/domain/types';
-import { colors, radius, spacing } from '@/ui';
-
-const METHODS: { id: PaymentMethod; title: string; subtitle?: string }[] = [
-  { id: 'card', title: 'Карта ВТБ •• 1234' },
-  { id: 'sbp', title: 'СБП' },
-  { id: 'digital_ruble', title: 'Цифровой рубль', subtitle: 'Демонстрационный режим' },
-];
+import { useActiveProfile } from '@/store/profileStore';
+import { radius, spacing, useTheme } from '@/ui';
 
 interface PaymentMethodPickerProps {
   value: PaymentMethod;
@@ -15,20 +10,44 @@ interface PaymentMethodPickerProps {
 }
 
 export function PaymentMethodPicker({ value, onChange }: PaymentMethodPickerProps) {
+  const { colors } = useTheme();
+  const last4 = useActiveProfile().cardLast4;
+  const methods: { id: PaymentMethod; title: string; subtitle?: string }[] = [
+    { id: 'card', title: `Карта ВТБ •• ${last4}` },
+    { id: 'sbp', title: 'СБП' },
+    { id: 'digital_ruble', title: 'Цифровой рубль', subtitle: 'Демонстрационный режим' },
+  ];
+
   return (
     <View style={styles.list}>
-      {METHODS.map((method) => {
+      {methods.map((method) => {
         const selected = method.id === value;
         return (
           <Pressable
             key={method.id}
             onPress={() => onChange(method.id)}
-            style={[styles.row, selected && styles.selected]}
+            style={[
+              styles.row,
+              {
+                borderColor: selected ? colors.primary : colors.border,
+                backgroundColor: selected ? colors.infoBg : colors.surface,
+              },
+            ]}
           >
-            <View style={[styles.radio, selected && styles.radioOn]} />
+            <View
+              style={[
+                styles.radio,
+                {
+                  borderColor: selected ? colors.primary : colors.textMuted,
+                  backgroundColor: selected ? colors.primary : 'transparent',
+                },
+              ]}
+            />
             <View>
-              <Text style={styles.title}>{method.title}</Text>
-              {method.subtitle ? <Text style={styles.sub}>{method.subtitle}</Text> : null}
+              <Text style={[styles.title, { color: colors.text }]}>{method.title}</Text>
+              {method.subtitle ? (
+                <Text style={[styles.sub, { color: colors.warning }]}>{method.subtitle}</Text>
+              ) : null}
             </View>
           </Pressable>
         );
@@ -46,21 +65,13 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
   },
-  selected: { borderColor: colors.primary, backgroundColor: colors.infoBg },
   radio: {
     width: 18,
     height: 18,
     borderRadius: 9,
     borderWidth: 2,
-    borderColor: colors.textMuted,
   },
-  radioOn: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary,
-  },
-  title: { fontSize: 16, fontWeight: '600', color: colors.text },
-  sub: { fontSize: 12, color: colors.warning, marginTop: 2 },
+  title: { fontSize: 15, fontWeight: '600' },
+  sub: { fontSize: 12, marginTop: 2 },
 });

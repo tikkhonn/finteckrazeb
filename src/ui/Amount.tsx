@@ -1,7 +1,8 @@
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
 
 import { formatRub } from '@/domain/money';
-import { typography } from './tokens';
+
+import { useTheme } from './theme';
 
 interface AmountProps {
   value: number;
@@ -9,14 +10,13 @@ interface AmountProps {
 }
 
 export function Amount({ value, size = 'lg' }: AmountProps) {
+  const { typography } = useTheme();
   return (
-    <Text style={size === 'lg' ? styles.lg : styles.md} accessibilityLabel={formatRub(value)}>
+    <Text
+      style={size === 'lg' ? typography.amount : typography.amountMd}
+      accessibilityLabel={formatRub(value)}
+    >
       {formatRub(value)}
     </Text>
   );
 }
-
-const styles = StyleSheet.create({
-  lg: typography.amount,
-  md: typography.amountMd,
-});

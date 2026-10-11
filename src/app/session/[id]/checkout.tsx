@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { isVtbGoError } from '@/domain/errors';
 import { diffCarts, isCartChanged } from '@/domain/cart';
@@ -11,10 +11,11 @@ import { CartDiffSheet } from '@/features/CartDiffSheet';
 import { PaymentMethodPicker } from '@/features/PaymentMethodPicker';
 import { useFinalizeCart, usePay, useSession } from '@/queries/hooks';
 import { useUiStore } from '@/store/uiStore';
-import { Amount, Button, Screen, colors } from '@/ui';
+import { Amount, AnimatedEnter, Button, Card, Screen, useTheme } from '@/ui';
 
 
 export default function CheckoutScreen() {
+  const { colors, typography } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const sessionQuery = useSession(id, { poll: true });
   const pay = usePay(id);
@@ -37,8 +38,8 @@ export default function CheckoutScreen() {
 
   if (!session) {
     return (
-      <Screen>
-        <Text style={{ color: colors.textMuted }}>Готовим оплату…</Text>
+      <Screen background="sky">
+        <Text style={[styles.muted, { color: colors.textMuted }]}>Готовим оплату…</Text>
       </Screen>
     );
   }
@@ -85,6 +86,7 @@ export default function CheckoutScreen() {
 
   return (
     <Screen
+      background="sky"
       footer={
         <Button
           title={`Оплатить ${formatRub(session.cart.total)}`}
@@ -94,28 +96,50 @@ export default function CheckoutScreen() {
         />
       }
     >
-      <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text }}>{session.storeName}</Text>
-      <Text style={{ color: colors.success, fontWeight: '600' }}>Корзина проверена</Text>
-      <Text style={{ color: colors.textMuted }}>К оплате</Text>
-      <Amount value={session.cart.total} />
-      <Text style={{ color: colors.textMuted, fontSize: 13 }}>
-        Версия корзины №{session.cart.version} · оплачивается только эта сумма
-      </Text>
+      <AnimatedEnter index={0}>
+        <Text style={typography.h2}>{session.storeName}</Text>
+        <Text style={[styles.success, { color: colors.success }]}>Корзина проверена</Text>
+      </AnimatedEnter>
 
-      {session.cart.items.map((item) => (
-        <Text key={item.id} style={{ color: colors.text }}>
-          {item.name} × {item.qty}
-        </Text>
-      ))}
+      <AnimatedEnter index={1}>
+        <Card variant="elevated">
+          <Text style={[styles.muted, { color: colors.textMuted }]}>К оплате</Text>
+          <Amount value={session.cart.total} />
+          <Text style={[styles.mutedSmall, { color: colors.textMuted }]}>
+            Версия корзины №{session.cart.version} · оплачивается только эта сумма
+          </Text>
+        </Card>
+      </AnimatedEnter>
 
-      <Text style={{ fontWeight: '600', color: colors.text }}>Способ оплаты</Text>
-      <PaymentMethodPicker value={method} onChange={setMethod} />
+      <AnimatedEnter index={2}>
+        <Card variant="elevated">
+          {session.cart.items.map((item) => (
+            <Text key={item.id} style={[styles.itemLine, { color: colors.text }]}>
+              {item.name} × {item.qty}
+            </Text>
+          ))}
+        </Card>
+      </AnimatedEnter>
 
-      <Text style={{ color: colors.textMuted }}>
-        Вы подтверждаете оплату этой корзины на сумму {formatRub(session.cart.total)}
-      </Text>
+      <AnimatedEnter index={3}>
+        <Card variant="elevated">
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Способ оплаты</Text>
+          <PaymentMethodPicker value={method} onChange={setMethod} />
+          <Text style={[styles.mutedSmall, { color: colors.textMuted }]}>
+            Вы подтверждаете оплату этой корзины на сумму {formatRub(session.cart.total)}
+          </Text>
+        </Card>
+      </AnimatedEnter>
 
       <CartDiffSheet visible={changed} diff={diff} onAck={() => void ackDiff()} />
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  muted: { fontSize: 15, fontWeight: '400' },
+  mutedSmall: { fontSize: 13, lineHeight: 18 },
+  success: { fontWeight: '600', fontSize: 16 },
+  itemLine: { fontSize: 15, fontWeight: '400' },
+  sectionTitle: { fontWeight: '600', fontSize: 16 },
+});
