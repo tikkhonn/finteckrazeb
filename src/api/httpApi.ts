@@ -1,4 +1,4 @@
-import type { PayRequest, VtbGoApi } from '@/api/contract';
+import type { AddItemInput, PayRequest, VtbGoApi } from '@/api/contract';
 import { VtbGoError } from '@/domain/errors';
 import type {
   Cart,
@@ -46,10 +46,11 @@ export class HttpApi implements VtbGoApi {
     return request<Session>(this.baseUrl, `/sessions/${sessionId}`);
   }
 
-  addItem(sessionId: string, barcode: string) {
+  addItem(sessionId: string, input: AddItemInput) {
+    const body = typeof input === 'string' ? { barcode: input } : { barcode: input.raw, exciseCode: input.exciseCode };
     return request<Cart>(this.baseUrl, `/sessions/${sessionId}/items`, {
       method: 'POST',
-      body: JSON.stringify({ barcode }),
+      body: JSON.stringify(body),
     });
   }
 

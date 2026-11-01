@@ -3,7 +3,9 @@ import { useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 
 import { getMockApi, isMockApi } from '@/api/apiProvider';
-import type { CatalogItem, PaymentSimMode, ReceiptSimMode } from '@/domain/types';
+import { APPLE_SCALE_CODE, DEMO_COLA, DEMO_ENERGY, payloadForDemo } from '@/api/mock/demoSkus';
+import { isVtbGoError } from '@/domain/errors';
+import type { CatalogItem, CatalogPreset, PaymentSimMode, ReceiptSimMode } from '@/domain/types';
 import { applyFlipHide } from '@/features/applyFlipHide';
 import { DemoCatalogEditor } from '@/features/DemoCatalogEditor';
 import { queryClient } from '@/queries/client';
@@ -37,6 +39,7 @@ export default function DemoPanelScreen() {
   const sessionId = useUiStore((s) => s.activeSessionId);
   const paymentMode = useDemoStore((s) => s.paymentMode);
   const receiptMode = useDemoStore((s) => s.receiptMode);
+  const catalogMode = useDemoStore((s) => s.catalogMode);
   const setPaymentMode = useDemoStore((s) => s.setPaymentMode);
   const setReceiptMode = useDemoStore((s) => s.setReceiptMode);
   const hideBalances = usePrefsStore((s) => s.hideBalances);
@@ -50,7 +53,8 @@ export default function DemoPanelScreen() {
     );
   }
 
-  const events = mock.listEvents(sessionId ?? undefined).slice(-12).reverse();
+  const api = mock;
+  const events = api.listEvents(sessionId ?? undefined).slice(-12).reverse();
 
   function requireSession(): string | null {
     if (!sessionId) {
@@ -62,7 +66,36 @@ export default function DemoPanelScreen() {
 
   const mutateCatalog = async (action: () => Promise<unknown>) => {
     await action();
-    setCatalog(mock.getCatalog());
+    setCatalog(api.getCatalog());
+  };
+
+  const switchCatalog = async (preset: CatalogPreset) => {
+    if (preset === catalogMode) {
+      return;
+    }
+    try {
+      await api.setCatalogPreset(preset);
+      setCatalog(api.getCatalog());
+    } catch (err) {
+      Alert.alert('Каталог', isVtbGoError(err) ? err.message : 'Не удалось сменить базу');
+    }
+  };
+
+  const addPayload = (raw: string, asCashier = false, ensureFull = false) => {
+    const activeId = requireSession();
+    if (!activeId) return;
+    void (async () => {
+      if (ensureFull && useDemoStore.getState().catalogMode !== 'full') {
+        await api.setCatalogPreset('full');
+        setCatalog(api.getCatalog());
+      }
+      if (asCashier) {
+        await api.cashierAddItem(activeId, raw);
+      } else {
+        await api.addItem(activeId, raw);
+      }
+      await refreshSession(activeId);
+    })().catch((err) => Alert.alert('Ошибка', isVtbGoError(err) ? err.message : String(err)));
   };
 
   return (
@@ -78,6 +111,36 @@ export default function DemoPanelScreen() {
         onDelete={(barcode) => mutateCatalog(() => mock.deleteCatalogItem(barcode))}
         onReset={() => mutateCatalog(() => mock.resetCatalog())}
       />
+
+      <Card>
+        <Text style={{ fontWeight: '700', color: colors.text }}>Каталог магазина</Text>
+        <Button
+          title="Базовый (8 товаров)"
+          variant={catalogMode === 'basic' ? 'primary' : 'secondary'}
+          onPress={() => void switchCatalog('basic')}
+        />
+        <Button
+          title="Полная база (50 товаров)"
+          variant={catalogMode === 'full' ? 'primary' : 'secondary'}
+          onPress={() => void switchCatalog('full')}
+        />
+        <Button title="Загрузить базу 50 товаров" variant="ghost" onPress={() => void switchCatalog('full')} />
+      </Card>
+
+      <Card>
+        <Text style={{ fontWeight: '700', color: colors.text }}>Быстрый скан</Text>
+        <Button
+          title="Симулировать скан акциза DataMatrix"
+          variant="secondary"
+          onPress={() => addPayload(payloadForDemo(DEMO_COLA), false, true)}
+        />
+        <Button
+          title="+ Энергетик 18+ (Акциз)"
+          variant="secondary"
+          onPress={() => addPayload(payloadForDemo(DEMO_ENERGY), false, true)}
+        />
+        <Button title="+ Весовые яблоки 450г" variant="secondary" onPress={() => addPayload(APPLE_SCALE_CODE, false, true)} />
+      </Card>
 
       <Card>
         <Text style={{ fontWeight: '700', color: colors.text }}>Скрытие баланса</Text>
@@ -118,14 +181,7 @@ export default function DemoPanelScreen() {
             key={`c-${item.barcode}`}
             title={item.name}
             variant="secondary"
-            onPress={() => {
-              const id = requireSession();
-              if (!id) return;
-              void mock
-                .cashierAddItem(id, item.barcode)
-                .then(() => refreshSession(id))
-                .catch((err) => Alert.alert('Ошибка', String(err.message)));
-            }}
+            onPress={() => addPayload(payloadForDemo(item), true)}
           />
         ))}
       </Card>
@@ -137,14 +193,7 @@ export default function DemoPanelScreen() {
             key={`a-${item.barcode}`}
             title={item.name}
             variant="ghost"
-            onPress={() => {
-              const id = requireSession();
-              if (!id) return;
-              void mock
-                .addItem(id, item.barcode)
-                .then(() => refreshSession(id))
-                .catch((err) => Alert.alert('Ошибка', String(err.message)));
-            }}
+            onPress={() => addPayload(payloadForDemo(item))}
           />
         ))}
       </Card>

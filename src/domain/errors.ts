@@ -10,7 +10,11 @@ export type VtbGoErrorCode =
   | 'NETWORK_LOST'
   | 'PAYMENT_NOT_FOUND'
   | 'REFUND_NOT_FOUND'
-  | 'EMPTY_CART';
+  | 'EMPTY_CART'
+  | 'AWAITING_EXCISE'
+  | 'DUPLICATE_EXCISE_CODE'
+  | 'AGE_RESTRICTED_18_PLUS'
+  | 'CATALOG_SWITCH_BLOCKED';
 
 export class VtbGoError extends Error {
   constructor(

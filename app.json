@@ -10,6 +10,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "ru.vtb.go.hackathon",
+      "appleTeamId": "858PTS3R3G",
       "icon": "./assets/images/icon.png",
       "infoPlist": {
         "NSCameraUsageDescription": "Камера нужна, чтобы сканировать QR магазина и штрихкоды товаров",

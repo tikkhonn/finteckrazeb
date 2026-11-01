@@ -1,6 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { CashbackPlaque } from '@/features/CashbackPlaque';
 import { CartItemRow } from '@/features/CartItemRow';
 import { isVtbGoError } from '@/domain/errors';
 import { useCancelSession, useFinalizeCart, useSession, useUpdateQty } from '@/queries/hooks';
@@ -16,7 +18,14 @@ export default function CartScreen() {
   const cancel = useCancelSession(id);
   const setSnapshot = useUiStore((s) => s.setCheckoutSnapshot);
   const setAcknowledged = useUiStore((s) => s.setAcknowledgedVersion);
+  const setActiveSession = useUiStore((s) => s.setActiveSession);
   const session = sessionQuery.data;
+
+  useEffect(() => {
+    if (id) {
+      setActiveSession(id);
+    }
+  }, [id, setActiveSession]);
 
   async function complete() {
     try {
@@ -80,8 +89,23 @@ export default function CartScreen() {
                 item={item}
                 index={index}
                 editable={editable}
-                onInc={() => updateQty.mutate({ itemId: item.id, qty: item.qty + 1 })}
-                onDec={() => updateQty.mutate({ itemId: item.id, qty: item.qty - 1 })}
+                onInc={() => {
+                  if ((item.exciseCodes ?? []).length > 0) {
+                    router.push(`/session/${id}/scan-item?exciseBarcode=${encodeURIComponent(item.barcode)}`);
+                    return;
+                  }
+                  if (item.weightKg != null) {
+                    router.push(`/session/${id}/scan-item`);
+                    return;
+                  }
+                  updateQty.mutate({ itemId: item.id, qty: item.qty + 1 });
+                }}
+                onDec={() =>
+                  updateQty.mutate({
+                    itemId: item.id,
+                    qty: item.weightKg != null ? 0 : item.qty - 1,
+                  })
+                }
               />
             ))
           )}
@@ -92,8 +116,9 @@ export default function CartScreen() {
         <Card variant="elevated">
           <Text style={[styles.muted, { color: colors.textMuted }]}>Итого</Text>
           <Amount value={session.cart.total} />
+          <CashbackPlaque items={session.cart.items} method="card" />
           <Text style={[styles.mutedSmall, { color: colors.textMuted }]}>
-            Окончательная сумма будет проверена перед оплатой
+            Окончательная сумма будет проверена перед оплатой. Кешбэк показан для карты ВТБ.
           </Text>
         </Card>
       </AnimatedEnter>

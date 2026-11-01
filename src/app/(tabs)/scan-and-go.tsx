@@ -5,7 +5,7 @@ import { isMockApi } from '@/api/apiProvider';
 import { formatDistance, nearestStores } from '@/api/mock/stores';
 import { RecentPurchases } from '@/features/RecentPurchases';
 import { ScanGoHero } from '@/features/ScanGoHero';
-import { StoreMapVisual } from '@/features/StoreMapVisual';
+import { StoreMap } from '@/features/storeMap/StoreMap';
 import { AnimatedEnter, Card, Chip, Screen, spacing, useTheme } from '@/ui';
 
 const NEAREST = nearestStores(1)[0];
@@ -45,7 +45,7 @@ export default function ScanAndGoScreen() {
           onPress={() => router.push('/stores-map')}
           style={({ pressed }) => [styles.full, pressed && styles.pressed]}
         >
-          <Card variant="elevated">
+          <Card variant="elevated" style={styles.mapCard}>
             <View style={styles.mapHead}>
               <View style={styles.mapCopy}>
                 <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>Магазины рядом</Text>
@@ -57,7 +57,7 @@ export default function ScanAndGoScreen() {
               </View>
               <Chip label="Карта" />
             </View>
-            <StoreMapVisual compact features={['Scan & Go']} />
+            <StoreMap compact features={['Scan & Go']} />
           </Card>
         </Pressable>
       </AnimatedEnter>
@@ -76,11 +76,19 @@ const styles = StyleSheet.create({
   header: { gap: spacing.xs },
   hello: { fontSize: 12, fontWeight: '400' },
   sectionLabel: { fontSize: 13, fontWeight: '600' },
+  mapCard: {
+    padding: 0,
+    overflow: 'hidden',
+    gap: 0,
+  },
   mapHead: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
   },
   mapCopy: {
     flex: 1,

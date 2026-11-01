@@ -1,4 +1,5 @@
 import { MockEngine } from '@/api/mock/engine';
+import { withTotals } from '@/domain/cart';
 import { VtbGoError } from '@/domain/errors';
 import type { SimulatorConfig } from '@/domain/types';
 
@@ -230,5 +231,44 @@ describe('MockEngine', () => {
     expect(engine.approveRefund(session.id).status).toBe('approved');
     expect(engine.completeRefund(session.id).status).toBe('completed');
     expect(engine.getSession(session.id).status).toBe('refunded');
+  });
+
+  it('смена каталога не блокируется старой сессией, если текущая пустая', () => {
+    const { engine } = createEngine({ paymentMode: 'success', receiptMode: 'immediate' });
+    const stale = engine.startSession('store_udoma');
+    engine.addItem(stale.id, COFFEE);
+    const current = engine.startSession('store_udoma');
+    expect(engine.getSession(stale.id).status).toBe('cancelled');
+    expect(() => engine.useCatalog('full', current.id)).not.toThrow();
+    expect(engine.catalogPreset).toBe('full');
+  });
+
+  it('смена каталога с focusSessionId игнорирует товары в другой сессии', () => {
+    const { engine } = createEngine({ paymentMode: 'success', receiptMode: 'immediate' });
+    const stale = engine.startSession('store_udoma');
+    engine.addItem(stale.id, COFFEE);
+    const now = 1_700_000_000_000;
+    const currentId = 'ses_current_empty';
+    engine.state.sessions[currentId] = {
+      id: currentId,
+      storeId: 'store_udoma',
+      storeName: 'У дома',
+      status: 'shopping',
+      cart: withTotals([], 1),
+      createdAt: now,
+      updatedAt: now,
+    };
+    expect(() => engine.useCatalog('full', currentId)).not.toThrow();
+    expect(engine.catalogPreset).toBe('full');
+  });
+
+  it('новая покупка отменяет предыдущую открытую сессию', () => {
+    const { engine } = createEngine({ paymentMode: 'success', receiptMode: 'immediate' });
+    const first = engine.startSession('store_udoma');
+    engine.addItem(first.id, COFFEE);
+    const second = engine.startSession('store_udoma');
+    expect(engine.getSession(first.id).status).toBe('cancelled');
+    expect(engine.getSession(second.id).status).toBe('shopping');
+    expect(engine.getSession(second.id).cart.items).toHaveLength(0);
   });
 });

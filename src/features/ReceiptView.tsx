@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { formatWeightLine, lineAmount } from '@/domain/cart';
 import { formatRub } from '@/domain/money';
 import type { Receipt } from '@/domain/types';
 import { radius, spacing, useTheme } from '@/ui';
@@ -69,12 +70,10 @@ export function ReceiptView({ receipt, storeName }: ReceiptViewProps) {
                 {item.name}
               </Text>
               <Text style={[styles.itemQty, { color: colors.textMuted }]}>
-                {formatRub(item.unitPrice)} × {item.qty}
+                {formatWeightLine(item) ?? `${formatRub(item.unitPrice)} × ${item.qty}`}
               </Text>
             </View>
-            <Text style={[styles.itemSum, { color: colors.text }]}>
-              {formatRub(item.unitPrice * item.qty)}
-            </Text>
+            <Text style={[styles.itemSum, { color: colors.text }]}>{formatRub(lineAmount(item))}</Text>
           </View>
         ))}
       </View>
@@ -82,6 +81,13 @@ export function ReceiptView({ receipt, storeName }: ReceiptViewProps) {
       <View style={[styles.totalRow, { borderTopColor: colors.border, backgroundColor: colors.chip }]}>
         <Text style={[styles.totalLabel, { color: colors.text }]}>Итого</Text>
         <Text style={[styles.totalValue, { color: colors.primary }]}>{formatRub(receipt.total)}</Text>
+      </View>
+
+      <View style={styles.cashbackRow}>
+        <Text style={[styles.metaLabel, { color: colors.textMuted }]}>Кешбэк ВТБ</Text>
+        <Text style={[styles.metaValue, { color: colors.success }]}>
+          +{formatRub(receipt.cashbackEarned ?? 0)}
+        </Text>
       </View>
 
       <Text style={[styles.disclaimer, { color: colors.textMuted }]}>
@@ -199,6 +205,12 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 22,
     fontWeight: '800',
+  },
+  cashbackRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
   },
   disclaimer: {
     fontSize: 11,

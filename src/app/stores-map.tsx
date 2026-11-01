@@ -2,9 +2,9 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { findStoreById, nearestStores, type MapPin } from '@/api/mock/stores';
+import { findStoreById, formatDistance, nearestStores, type MapPin } from '@/api/mock/stores';
 import { NearbyStoreCard } from '@/features/NearbyStoreCard';
-import { StoreMapVisual } from '@/features/StoreMapVisual';
+import { StoreMap } from '@/features/storeMap/StoreMap';
 import { AnimatedEnter, Button, Card, Screen, spacing, useTheme } from '@/ui';
 
 const NEARBY = nearestStores(3);
@@ -43,12 +43,14 @@ export default function StoresMapScreen() {
     <Screen background="sky" edges={['bottom']}>
       <AnimatedEnter index={0}>
         <Text style={typography.h2}>Магазины рядом</Text>
-        <Text style={[styles.lead, { color: colors.textMuted }]}>Карта и ближайшие точки Scan & Go</Text>
+        <Text style={[styles.lead, { color: colors.textMuted }]}>
+          Точки Scan & Go в центре — выберите пин, чтобы начать покупку
+        </Text>
       </AnimatedEnter>
 
       <AnimatedEnter index={1}>
-        <Card variant="elevated">
-          <StoreMapVisual selectedId={selectedId ?? remotePin?.id} onPinPress={onPinPress} />
+        <Card variant="elevated" style={styles.mapCard}>
+          <StoreMap selectedId={selectedId ?? remotePin?.id} onPinPress={onPinPress} />
         </Card>
       </AnimatedEnter>
 
@@ -56,7 +58,9 @@ export default function StoresMapScreen() {
         <AnimatedEnter index={2}>
           <Card variant="elevated">
             <Text style={[styles.store, { color: colors.text }]}>{remotePin.name}</Text>
-            <Text style={[styles.meta, { color: colors.success }]}>{remotePin.feature}</Text>
+            <Text style={[styles.meta, { color: colors.success }]}>
+              {remotePin.feature} · {formatDistance(remotePin.distanceM)}
+            </Text>
             <Text style={[styles.note, { color: colors.textMuted }]}>{remotePin.address}</Text>
             <Text style={[styles.note, { color: colors.textMuted }]}>Take & Go скоро появится в приложении.</Text>
           </Card>
@@ -67,7 +71,9 @@ export default function StoresMapScreen() {
         <AnimatedEnter index={2}>
           <Card variant="elevated">
             <Text style={[styles.store, { color: colors.text }]}>{remoteStore.name}</Text>
-            <Text style={[styles.meta, { color: colors.success }]}>Scan & Go</Text>
+            <Text style={[styles.meta, { color: colors.success }]}>
+              Scan & Go · {formatDistance(remoteStore.distanceM)}
+            </Text>
             <Text style={[styles.note, { color: colors.textMuted }]}>{remoteStore.address}</Text>
             <Button
               title="Начать покупку"
@@ -97,6 +103,11 @@ export default function StoresMapScreen() {
 
 const styles = StyleSheet.create({
   lead: { fontSize: 15, fontWeight: '400' },
+  mapCard: {
+    padding: 0,
+    overflow: 'hidden',
+    gap: 0,
+  },
   sectionLabel: {
     fontSize: 15,
     fontWeight: '600',

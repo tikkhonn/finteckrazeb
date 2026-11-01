@@ -16,6 +16,10 @@ export interface Profile {
   id: ProfileId;
   firstName: string;
   lastName: string;
+  /** ISO-дата, только для демо-профиля. Возраст в оплате решает `isAdultVerified`. */
+  birthDate: string;
+  /** Паспорт ВТБ подтвердил 18+. У Дмитрия всегда false. */
+  isAdultVerified: boolean;
   phone: string;
   email: string;
   address: string;
@@ -114,6 +118,8 @@ export const PROFILES: Record<ProfileId, Profile> = {
     id: 'anna',
     firstName: 'Анна',
     lastName: 'Соколова',
+    birthDate: '1996-03-12',
+    isAdultVerified: true,
     phone: '+7 916 123-45-67',
     email: 'anna.sokolova@example.ru',
     address: 'Москва, ул. Тверская, 12, кв. 45',
@@ -133,10 +139,12 @@ export const PROFILES: Record<ProfileId, Profile> = {
     id: 'dmitry',
     firstName: 'Дмитрий',
     lastName: 'Орлов',
+    birthDate: '2010-04-15',
+    isAdultVerified: false,
     phone: '+7 921 555-01-22',
     email: 'd.orlov@example.ru',
     address: 'Санкт-Петербург, Невский пр., 88, кв. 10',
-    work: 'АО «Балтийский порт», инженер',
+    work: 'Студент, 16 лет',
     paymentRegion: 'Санкт-Петербург',
     gosuslugi: 'connected',
     cardLast4: '8891',
@@ -146,12 +154,14 @@ export const PROFILES: Record<ProfileId, Profile> = {
     cardNetwork: 'МИР',
     accountName: 'Накопительный счёт',
     balance: 54320,
-    documents: [doc('passport', '40 18 112233 · выдан 04.11.2018'), doc('inn', '780987654321')],
+    documents: [doc('inn', '780987654321')],
   },
   maria: {
     id: 'maria',
     firstName: 'Мария',
     lastName: 'Лебедева',
+    birthDate: '1994-06-21',
+    isAdultVerified: true,
     phone: '+7 843 200-11-09',
     email: 'm.lebedeva@example.ru',
     address: 'Казань, ул. Баумана, 5, кв. 3',

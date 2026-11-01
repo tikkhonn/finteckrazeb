@@ -30,6 +30,16 @@ export interface CatalogItem {
   barcode: string;
   name: string;
   price: number;
+  /** Обязательная марка DataMatrix / PDF417 на каждую единицу. */
+  requiresExcise?: boolean;
+  /** Энергетики и прочие 18+. */
+  isAdultOnly?: boolean;
+  /** Весовой товар: цена за 1 кг, ищется по PLU. */
+  isWeighted?: boolean;
+  /** 5 цифр PLU для штрихкода весов. */
+  pluCode?: string;
+  /** Доля кешбэка, например 0.05 или 0.15. По умолчанию 0.05. */
+  cashbackRate?: number;
 }
 
 export interface CartItem {
@@ -39,6 +49,12 @@ export interface CartItem {
   unitPrice: number;
   qty: number;
   addedBy: CartActor;
+  exciseCodes: string[];
+  weightKg?: number;
+  /** Вклад строки в кешбэк по карте ВТБ, до коэффициента способа оплаты. */
+  calculatedCashback: number;
+  cashbackRate?: number;
+  isAdultOnly?: boolean;
 }
 
 export interface Cart {
@@ -89,6 +105,9 @@ export interface Receipt {
   issuedAt: number;
   items: CartItem[];
   total: number;
+  exitPassToken: string;
+  exitPassExpiresAt: number;
+  cashbackEarned: number;
 }
 
 export interface Refund {
@@ -125,6 +144,7 @@ export interface Purchase {
   refunds: Refund[];
 }
 
+export type CatalogPreset = 'basic' | 'full';
 export type PaymentSimMode = 'success' | 'decline' | 'delay' | 'lost';
 export type ReceiptSimMode = 'immediate' | 'delayed';
 

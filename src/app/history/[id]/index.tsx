@@ -2,8 +2,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
 import { Text } from 'react-native';
 
-import { ReceiptView } from '@/features/ReceiptView';
+import { formatWeightLine, lineAmount } from '@/domain/cart';
 import { formatRub } from '@/domain/money';
+import { ExitTurnstilePass } from '@/features/ExitTurnstilePass';
+import { ReceiptView } from '@/features/ReceiptView';
 import { usePurchase } from '@/queries/hooks';
 import { useUiStore } from '@/store/uiStore';
 import { Button, Card, Screen, StatusBadge, useTheme } from '@/ui';
@@ -39,13 +41,23 @@ export default function PurchaseScreen() {
       <Card>
         {data.session.cart.items.map((item) => (
           <Text key={item.id} style={{ color: colors.text }}>
-            {item.name} × {item.qty} — {formatRub(item.unitPrice * item.qty)}
+            {item.weightKg != null ? `${item.name} · ${formatWeightLine(item)}` : `${item.name} × ${item.qty}`} — {formatRub(lineAmount(item))}
           </Text>
         ))}
       </Card>
 
       {data.receipt ? (
-        <ReceiptView receipt={data.receipt} storeName={data.session.storeName} />
+        <>
+          <ExitTurnstilePass
+            receiptId={data.receipt.id}
+            refundCount={
+              data.session.status === 'refund_requested' || data.session.status === 'refund_approved'
+                ? Math.max(data.refunds.length, 1)
+                : 0
+            }
+          />
+          <ReceiptView receipt={data.receipt} storeName={data.session.storeName} />
+        </>
       ) : (
         <Text style={{ color: colors.textMuted }}>Чек ещё не сформирован</Text>
       )}

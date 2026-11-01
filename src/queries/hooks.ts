@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { getApi } from '@/api/apiProvider';
-import type { PayRequest } from '@/api/contract';
+import type { AddItemInput, PayRequest } from '@/api/contract';
 import { queryKeys } from './keys';
 
 const api = getApi();
@@ -53,7 +53,7 @@ export function useStartSession() {
 export function useAddItem(sessionId: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (barcode: string) => api.addItem(sessionId, barcode),
+    mutationFn: (input: AddItemInput) => api.addItem(sessionId, input),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: queryKeys.session(sessionId) });
     },

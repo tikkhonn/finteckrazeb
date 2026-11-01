@@ -1,8 +1,8 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TextInput } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput } from 'react-native';
 
-import { getApi, isMockApi } from '@/api/apiProvider';
+import { getApi, getMockApi, isMockApi } from '@/api/apiProvider';
 import { DEMO_STORE, findStoreById } from '@/api/mock/stores';
 import { isVtbGoError } from '@/domain/errors';
 import { assertStoreMatches } from '@/domain/storeGate';
@@ -39,6 +39,10 @@ function ScanStoreBody({ storeId }: { storeId?: string }) {
       setError(null);
       try {
         const store = assertStoreMatches(await getApi().getStore(trimmed), expected?.id);
+        const notice = getMockApi()?.takeCatalogNotice();
+        if (notice) {
+          Alert.alert('Каталог', notice);
+        }
         const session = await start.mutateAsync(store.id);
         setActiveSession(session.id);
         router.replace(`/session/${session.id}/cart`);

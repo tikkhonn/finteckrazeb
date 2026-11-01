@@ -15,11 +15,14 @@ export interface PayRequest {
   idempotencyKey: string;
 }
 
+/** Строка — сырой код с камеры. Объект — тот же код плюс уже отсканированная марка. */
+export type AddItemInput = string | { raw: string; exciseCode?: string };
+
 export interface VtbGoApi {
   getStore(storeQr: string): Promise<Store>;
   startSession(storeId: string): Promise<Session>;
   getSession(sessionId: string): Promise<Session>;
-  addItem(sessionId: string, barcode: string): Promise<Cart>;
+  addItem(sessionId: string, input: AddItemInput): Promise<Cart>;
   updateQty(sessionId: string, itemId: string, qty: number): Promise<Cart>;
   finalizeCart(sessionId: string): Promise<Cart>;
   cancelSession(sessionId: string): Promise<Session>;

@@ -1,13 +1,15 @@
 import type { Store } from '@/domain/types';
 
+import { placeCoordinate, walkingMeters, type LatLng } from './mapGeo';
+
 export const STORES: Store[] = [
   {
     id: 'store_udoma',
     name: 'Магазин «У дома»',
-    address: 'ул. Примерная, 1',
+    address: 'Невский пр., 68',
     qr: 'VTBGO-STORE-UDOMA',
     scenario: 'scan_and_go',
-    distanceM: 120,
+    distanceM: walkingMeters('store_udoma'),
   },
   {
     id: 'store_green',
@@ -15,7 +17,7 @@ export const STORES: Store[] = [
     address: 'Невский пр., 24',
     qr: 'VTBGO-STORE-GREEN',
     scenario: 'scan_and_go',
-    distanceM: 340,
+    distanceM: walkingMeters('store_green'),
   },
   {
     id: 'store_prod24',
@@ -23,7 +25,7 @@ export const STORES: Store[] = [
     address: 'ул. Рубинштейна, 7',
     qr: 'VTBGO-STORE-PROD24',
     scenario: 'scan_and_go',
-    distanceM: 560,
+    distanceM: walkingMeters('store_prod24'),
   },
   {
     id: 'store_lavka',
@@ -31,7 +33,7 @@ export const STORES: Store[] = [
     address: 'Литейный пр., 51',
     qr: 'VTBGO-STORE-LAVKA',
     scenario: 'scan_and_go',
-    distanceM: 870,
+    distanceM: walkingMeters('store_lavka'),
   },
   {
     id: 'store_fresh',
@@ -39,7 +41,7 @@ export const STORES: Store[] = [
     address: 'ул. Марата, 12',
     qr: 'VTBGO-STORE-FRESH',
     scenario: 'scan_and_go',
-    distanceM: 1250,
+    distanceM: walkingMeters('store_fresh'),
   },
 ];
 
@@ -64,34 +66,35 @@ export interface MapPin {
   name: string;
   address: string;
   feature: StoreFeature;
-  x: number;
-  y: number;
+  coordinate: LatLng;
+  distanceM: number;
 }
 
-const PIN_POSITIONS: Record<string, Pick<MapPin, 'x' | 'y'>> = {
-  store_udoma: { x: 0.32, y: 0.4 },
-  store_green: { x: 0.68, y: 0.28 },
-  store_prod24: { x: 0.2, y: 0.78 },
-  store_lavka: { x: 0.82, y: 0.6 },
-  store_fresh: { x: 0.12, y: 0.18 },
-};
+function pinFromNode(
+  id: string,
+  info: { name: string; address: string; feature: StoreFeature },
+): MapPin {
+  return {
+    id,
+    ...info,
+    coordinate: placeCoordinate(id),
+    distanceM: walkingMeters(id),
+  };
+}
 
 export const MAP_PINS: MapPin[] = [
-  ...STORES.map((store) => ({
-    id: store.id,
-    name: store.name,
-    address: store.address,
-    feature: 'Scan & Go' as const,
-    ...PIN_POSITIONS[store.id],
-  })),
-  {
-    id: 'pin_box',
+  ...STORES.map((store) =>
+    pinFromNode(store.id, {
+      name: store.name,
+      address: store.address,
+      feature: 'Scan & Go',
+    }),
+  ),
+  pinFromNode('pin_box', {
     name: 'Box 24',
     address: 'ул. Садовая, 9',
     feature: 'Take & Go',
-    x: 0.52,
-    y: 0.7,
-  },
+  }),
 ];
 
 export function findStoreByQr(raw: string): Store | undefined {

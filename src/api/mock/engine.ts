@@ -1,7 +1,11 @@
 import catalogData from './catalog.json';
-import { withTotals } from '@/domain/cart';
+import products50 from './products50.json';
+import { parseCatalogItems } from '@/domain/catalog/parseCatalog';
+import { basketCashback, lineAmount, withLineCashback, withTotals } from '@/domain/cart';
 import { assertEan13 } from '@/domain/ean';
 import { VtbGoError } from '@/domain/errors';
+import { exitPassExpiresAt, exitPassToken } from '@/domain/exitPass';
+import { parseScannedCode, type ParsedCode } from '@/domain/scanner/barcodeParser';
 import { assertTransition, EDITABLE_STATUSES, PURCHASE_HISTORY_STATUSES } from '@/domain/stateMachine';
 import type {
   Cart,
@@ -28,16 +32,35 @@ const RECEIPT_DELAY_MS = 4000;
 const PAYMENT_DELAY_MS = 5000;
 const LOST_REVEAL_MS = 8000;
 
+const AGE_MESSAGE =
+  'Ограничение 18+. По данным профиля ВТБ вам еще не исполнилось 18 лет. Покупка энергетических и подакцизных напитков недоступна';
+const EXCISE_MESSAGE =
+  'Товар подлежит обязательной маркировке. Наведите камеру на QR / DataMatrix на крышке или этикетке';
+const DUPLICATE_MARK_MESSAGE = 'Эта бутылка уже в корзине. Отсканируйте марку другой бутылки';
+
 export interface EngineDeps {
   now: () => number;
   getSim: () => SimulatorConfig;
+  /** Нет функции — считаем покупателя совершеннолетним (старые тесты). */
+  isAdultVerified?: () => boolean;
+}
+
+export interface AddItemExtras {
+  exciseCode?: string;
 }
 
 export function seedCatalog(): CatalogItem[] {
   return SEED_CATALOG.map((item) => ({ ...item }));
 }
 
+export function fullCatalog(): CatalogItem[] {
+  return parseCatalogItems(products50);
+}
+
 export class MockEngine {
+  /** `custom` — правки на устройстве или каталог по URL. */
+  private catalogPreset: 'basic' | 'full' | 'custom' = 'basic';
+
   constructor(
     public state: MockState,
     private readonly deps: EngineDeps,
@@ -61,9 +84,14 @@ export class MockEngine {
       throw new VtbGoError('INVALID_CATALOG_ITEM', 'Цена должна быть больше нуля.');
     }
     const item: CatalogItem = {
-      barcode: assertEan13(input.barcode),
+      barcode: input.isWeighted ? input.barcode.trim() : assertEan13(input.barcode),
       name,
       price: Math.round(input.price * 100) / 100,
+      requiresExcise: input.requiresExcise === true ? true : undefined,
+      isAdultOnly: input.isAdultOnly === true ? true : undefined,
+      isWeighted: input.isWeighted === true ? true : undefined,
+      pluCode: input.pluCode,
+      cashbackRate: input.cashbackRate,
     };
     const index = this.catalog.findIndex((entry) => entry.barcode === item.barcode);
     if (index >= 0) {
@@ -71,15 +99,70 @@ export class MockEngine {
     } else {
       this.catalog.push(item);
     }
+    this.catalogPreset = 'custom';
     return { ...item };
   }
 
   deleteCatalogItem(barcode: string): void {
     this.catalog = this.catalog.filter((item) => item.barcode !== barcode);
+    this.catalogPreset = 'custom';
   }
 
   resetCatalogToSeed(): void {
     this.catalog = seedCatalog();
+    this.catalogPreset = 'basic';
+  }
+
+  markCustomCatalog(): void {
+    this.catalogPreset = 'custom';
+  }
+
+  useCatalog(preset: 'basic' | 'full', focusSessionId?: string | null): void {
+    if (preset === 'full' && this.catalogPreset === 'full') {
+      return;
+    }
+    this.assertCanSwitchCatalog(focusSessionId);
+    this.catalog = preset === 'full' ? fullCatalog() : seedCatalog();
+    this.catalogPreset = preset;
+  }
+
+  importCatalog(items: CatalogItem[], focusSessionId?: string | null): void {
+    this.assertCanSwitchCatalog(focusSessionId);
+    this.catalog = items.map((item) => ({ ...item }));
+    this.catalogPreset = 'custom';
+  }
+
+  private assertCanSwitchCatalog(focusSessionId?: string | null): void {
+    if (focusSessionId) {
+      const session = this.state.sessions[focusSessionId];
+      if (
+        session &&
+        EDITABLE_STATUSES.includes(session.status) &&
+        session.cart.items.length > 0
+      ) {
+        throw new VtbGoError('CATALOG_SWITCH_BLOCKED', 'Сначала очистите корзину.');
+      }
+      return;
+    }
+    const blocked = Object.values(this.state.sessions).some(
+      (session) => EDITABLE_STATUSES.includes(session.status) && session.cart.items.length > 0,
+    );
+    if (blocked) {
+      throw new VtbGoError(
+        'CATALOG_SWITCH_BLOCKED',
+        'Сначала очистите корзину или отмените незавершённую покупку.',
+      );
+    }
+  }
+
+  private cancelOtherEditableSessions(): void {
+    for (const session of Object.values(this.state.sessions)) {
+      if (!EDITABLE_STATUSES.includes(session.status)) {
+        continue;
+      }
+      this.transition(session, 'cancelled');
+      this.record(session.id, 'cancel_session', 'system', 'Начата новая покупка в другом магазине');
+    }
   }
 
   listStores(): Store[] {
@@ -94,7 +177,19 @@ export class MockEngine {
     return events.filter((event) => event.sessionId === sessionId);
   }
 
-  getStore(storeQr: string): Store {
+  getStore(storeQr: string, focusSessionId?: string | null): Store {
+    const parsed = parseScannedCode(storeQr);
+    if (parsed.type === 'catalog_qr') {
+      this.useCatalog('full', focusSessionId);
+      const store = findStoreByQr('VTBGO-STORE-UDOMA');
+      if (!store) {
+        throw new VtbGoError('STORE_NOT_FOUND', 'Магазин не найден. Отсканируйте QR торговой точки.');
+      }
+      return store;
+    }
+    if (parsed.type === 'catalog_url') {
+      throw new VtbGoError('STORE_NOT_FOUND', 'Ссылка на каталог обрабатывается отдельно.');
+    }
     const store = findStoreByQr(storeQr);
     if (!store) {
       throw new VtbGoError('STORE_NOT_FOUND', 'Магазин не найден. Отсканируйте QR торговой точки.');
@@ -107,6 +202,7 @@ export class MockEngine {
     if (!store) {
       throw new VtbGoError('STORE_NOT_FOUND', 'Магазин не найден.');
     }
+    this.cancelOtherEditableSessions();
     const now = this.deps.now();
     const session: Session = {
       id: this.nextId('ses'),
@@ -127,43 +223,87 @@ export class MockEngine {
     return this.cloneSession(this.requireSession(sessionId));
   }
 
-  addItem(sessionId: string, barcode: string, actor: CartActor = 'customer'): Cart {
+  addItem(sessionId: string, raw: string, actor: CartActor = 'customer', extras?: AddItemExtras): Cart {
     this.tick(sessionId);
     const session = this.requireSession(sessionId);
     this.assertEditable(session);
-    let code: string;
-    try {
-      code = assertEan13(barcode);
-    } catch (error) {
-      this.record(sessionId, 'invalid_barcode', actor === 'cashier' ? 'store' : 'customer', barcode);
-      throw error;
+    const eventActor = actor === 'cashier' ? 'store' : 'customer';
+
+    const resolved = this.resolveScan(raw);
+    if (resolved.type === 'store_qr' || resolved.type === 'catalog_qr' || resolved.type === 'catalog_url') {
+      this.record(sessionId, 'invalid_barcode', eventActor, raw);
+      throw new VtbGoError('INVALID_BARCODE', 'Это код магазина, а не товар.');
     }
-    const product = this.catalog.find((item) => item.barcode === code);
+    if (resolved.type === 'unknown') {
+      this.record(sessionId, 'invalid_barcode', eventActor, raw);
+      throw new VtbGoError('INVALID_BARCODE', 'Некорректный штрихкод. Нужен EAN-13.');
+    }
+    if (resolved.type === 'weighted' && resolved.weightKg <= 0) {
+      this.record(sessionId, 'invalid_barcode', eventActor, raw);
+      throw new VtbGoError('INVALID_BARCODE', 'Вес на этикетке не распознан.');
+    }
+
+    const product = this.findProduct(resolved);
     if (!product) {
-      this.record(sessionId, 'item_not_found', actor === 'cashier' ? 'store' : 'customer', barcode);
+      this.record(sessionId, 'item_not_found', eventActor, raw);
       throw new VtbGoError('ITEM_NOT_FOUND', 'Товар не найден. Обратитесь к сотруднику.');
     }
 
-    const items = session.cart.items.map((item) => ({ ...item }));
-    const existing = items.find((item) => item.barcode === product.barcode);
-    if (existing) {
-      existing.qty += 1;
-    } else {
-      items.push({
-        id: `item_${product.barcode}`,
+    if (product.isAdultOnly && !this.adultVerified()) {
+      this.record(sessionId, 'age_restricted', eventActor, product.name);
+      throw new VtbGoError('AGE_RESTRICTED_18_PLUS', AGE_MESSAGE);
+    }
+
+    const mark = resolved.type === 'gs1' ? resolved.exciseCode : extras?.exciseCode;
+    if (product.requiresExcise && !mark) {
+      this.record(sessionId, 'awaiting_excise', eventActor, product.name);
+      throw new VtbGoError('AWAITING_EXCISE', EXCISE_MESSAGE, {
         barcode: product.barcode,
         name: product.name,
-        unitPrice: product.price,
-        qty: 1,
-        addedBy: actor,
+        isAdultOnly: product.isAdultOnly === true,
       });
+    }
+
+    const items = session.cart.items.map((item) => withLineCashback({ ...item, exciseCodes: item.exciseCodes ?? [] }));
+    if (mark) {
+      this.assertUniqueMark(items, mark);
+    }
+
+    if (product.isWeighted && resolved.type === 'weighted') {
+      items.push(
+        this.buildItem(product, actor, {
+          id: `item_${product.pluCode}_${this.nextId('pkg')}`,
+          barcode: resolved.ean13,
+          qty: 1,
+          weightKg: resolved.weightKg,
+        }),
+      );
+    } else {
+      const existing = items.find((item) => item.barcode === product.barcode && item.weightKg == null);
+      if (existing && product.requiresExcise && mark) {
+        existing.exciseCodes = [...existing.exciseCodes, mark];
+        existing.qty = existing.exciseCodes.length;
+        Object.assign(existing, withLineCashback(existing));
+      } else if (existing) {
+        existing.qty += 1;
+        Object.assign(existing, withLineCashback(existing));
+      } else {
+        items.push(
+          this.buildItem(product, actor, {
+            id: `item_${product.barcode}`,
+            barcode: product.barcode,
+            qty: 1,
+            exciseCodes: mark ? [mark] : [],
+          }),
+        );
+      }
     }
 
     this.replaceCart(session, items);
     this.record(
       sessionId,
       actor === 'cashier' ? 'cashier_add_item' : 'add_item',
-      actor === 'cashier' ? 'store' : 'customer',
+      eventActor,
       `${product.name} ×1`,
     );
     return this.cloneCart(session.cart);
@@ -177,14 +317,38 @@ export class MockEngine {
       throw new VtbGoError('INVALID_STATE', 'Количество должно быть целым неотрицательным числом.');
     }
 
-    const items = session.cart.items
-      .map((item) => ({ ...item }))
-      .filter((item) => (item.id === itemId ? qty > 0 : true))
-      .map((item) => (item.id === itemId ? { ...item, qty } : item));
-
-    if (qty > 0 && !items.some((item) => item.id === itemId)) {
+    const current = session.cart.items.find((item) => item.id === itemId);
+    if (!current) {
       throw new VtbGoError('ITEM_NOT_FOUND', 'Позиция не найдена в корзине.');
     }
+    if (current.weightKg != null && qty !== 0 && qty !== current.qty) {
+      throw new VtbGoError('INVALID_STATE', 'Весовой пакет нельзя изменить счётчиком. Удалите его и взвесьте ещё раз.');
+    }
+    const marks = current.exciseCodes ?? [];
+    if (marks.length > 0 && qty > current.qty) {
+      throw new VtbGoError('AWAITING_EXCISE', EXCISE_MESSAGE, {
+        barcode: current.barcode,
+        name: current.name,
+        isAdultOnly: current.isAdultOnly === true,
+      });
+    }
+
+    const items = session.cart.items.flatMap((entry) => {
+      if (entry.id !== itemId) {
+        return [withLineCashback({ ...entry, exciseCodes: entry.exciseCodes ?? [] })];
+      }
+      if (qty === 0) {
+        return [];
+      }
+      const exciseCodes = marks.length > 0 ? marks.slice(0, qty) : (entry.exciseCodes ?? []);
+      return [
+        withLineCashback({
+          ...entry,
+          qty: marks.length > 0 ? exciseCodes.length : qty,
+          exciseCodes,
+        }),
+      ];
+    });
 
     this.replaceCart(session, items);
     this.record(sessionId, 'update_qty', 'customer', `${itemId} → ${qty}`);
@@ -366,7 +530,7 @@ export class MockEngine {
       sessionId,
       itemId: item.id,
       itemName: item.name,
-      amount: item.unitPrice * item.qty,
+      amount: lineAmount(item),
       status: 'requested',
       createdAt: this.deps.now(),
     };
@@ -472,15 +636,21 @@ export class MockEngine {
       return;
     }
     const payment = this.requirePayment(session.paymentId);
+    const now = this.deps.now();
+    const receiptId = this.nextId('rcpt');
+    const items = session.cart.items.map((item) => withLineCashback({ ...item, exciseCodes: item.exciseCodes ?? [] }));
     const receipt: Receipt = {
-      id: this.nextId('rcpt'),
+      id: receiptId,
       sessionId: session.id,
       paymentId: payment.id,
       fiscalMark: 'DEMO',
       number: `ДЕМО-${this.state.seq.toString().padStart(4, '0')}`,
-      issuedAt: this.deps.now(),
-      items: session.cart.items.map((item) => ({ ...item })),
+      issuedAt: now,
+      items,
       total: session.cart.total,
+      exitPassToken: exitPassToken(receiptId, now),
+      exitPassExpiresAt: exitPassExpiresAt(now),
+      cashbackEarned: basketCashback(items, payment.method),
     };
     this.state.receipts[receipt.id] = receipt;
     session.receiptDueAt = undefined;
@@ -554,8 +724,66 @@ export class MockEngine {
     return `${prefix}_${this.state.seq}`;
   }
 
+  private resolveScan(raw: string): ParsedCode {
+    const parsed = parseScannedCode(raw);
+    if (parsed.type !== 'unknown') {
+      return parsed;
+    }
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length === 13 && this.catalog.some((item) => item.barcode === digits)) {
+      return { type: 'ean13', ean13: digits };
+    }
+    return { type: 'unknown' };
+  }
+
+  private findProduct(parsed: ParsedCode): CatalogItem | undefined {
+    if (parsed.type === 'weighted') {
+      return this.catalog.find((item) => item.pluCode === parsed.pluCode);
+    }
+    if (parsed.type === 'ean13' || parsed.type === 'gs1') {
+      return this.catalog.find((item) => item.barcode === parsed.ean13);
+    }
+    return undefined;
+  }
+
+  private adultVerified(): boolean {
+    return this.deps.isAdultVerified ? this.deps.isAdultVerified() : true;
+  }
+
+  private assertUniqueMark(items: CartItem[], mark: string): void {
+    if (items.some((item) => (item.exciseCodes ?? []).includes(mark))) {
+      throw new VtbGoError('DUPLICATE_EXCISE_CODE', DUPLICATE_MARK_MESSAGE);
+    }
+  }
+
+  private buildItem(
+    product: CatalogItem,
+    actor: CartActor,
+    input: { id: string; barcode: string; qty: number; weightKg?: number; exciseCodes?: string[] },
+  ): CartItem {
+    return withLineCashback({
+      id: input.id,
+      barcode: input.barcode,
+      name: product.name,
+      unitPrice: product.price,
+      qty: input.qty,
+      addedBy: actor,
+      exciseCodes: input.exciseCodes ?? [],
+      weightKg: input.weightKg,
+      calculatedCashback: 0,
+      cashbackRate: product.cashbackRate,
+      isAdultOnly: product.isAdultOnly === true ? true : undefined,
+    });
+  }
+
   private cloneSession(session: Session): Session {
-    return JSON.parse(JSON.stringify(session)) as Session;
+    const copy = JSON.parse(JSON.stringify(session)) as Session;
+    copy.cart.items = copy.cart.items.map((item) => ({
+      ...item,
+      exciseCodes: item.exciseCodes ?? [],
+      calculatedCashback: item.calculatedCashback ?? 0,
+    }));
+    return copy;
   }
 
   private cloneCart(cart: Cart): Cart {

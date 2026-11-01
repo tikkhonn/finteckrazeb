@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
+import { ExitTurnstilePass } from '@/features/ExitTurnstilePass';
 import { PurchaseSuccessHeader } from '@/features/PurchaseSuccessHeader';
 import { ReceiptPendingCard } from '@/features/ReceiptPendingCard';
 import { ReceiptView } from '@/features/ReceiptView';
@@ -38,7 +39,13 @@ export default function DoneScreen() {
 
       <AnimatedEnter index={1}>
         {purchase.receipt ? (
-          <ReceiptView receipt={purchase.receipt} storeName={purchase.session.storeName} />
+          <View style={{ gap: spacing.md, width: '100%' }}>
+            <ExitTurnstilePass
+              receiptId={purchase.receipt.id}
+              refundCount={refundSlots(purchase.session.status, purchase.refunds.length)}
+            />
+            <ReceiptView receipt={purchase.receipt} storeName={purchase.session.storeName} />
+          </View>
         ) : (
           <ReceiptPendingCard storeName={purchase.session.storeName} total={purchase.session.cart.total} />
         )}
@@ -57,6 +64,13 @@ export default function DoneScreen() {
       </AnimatedEnter>
     </Screen>
   );
+}
+
+function refundSlots(status: string, count: number): number {
+  if (status !== 'refund_requested' && status !== 'refund_approved') {
+    return 0;
+  }
+  return Math.max(count, 1);
 }
 
 const styles = StyleSheet.create({

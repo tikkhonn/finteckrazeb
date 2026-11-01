@@ -2,12 +2,13 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
+import { diffCarts, formatWeightLine, isCartChanged } from '@/domain/cart';
 import { isVtbGoError } from '@/domain/errors';
-import { diffCarts, isCartChanged } from '@/domain/cart';
 import { formatRub } from '@/domain/money';
 import type { PaymentMethod } from '@/domain/types';
 import { authenticatePayment } from '@/features/authenticatePayment';
 import { CartDiffSheet } from '@/features/CartDiffSheet';
+import { CashbackPlaque } from '@/features/CashbackPlaque';
 import { PaymentMethodPicker } from '@/features/PaymentMethodPicker';
 import { useFinalizeCart, usePay, useSession } from '@/queries/hooks';
 import { useUiStore } from '@/store/uiStore';
@@ -115,7 +116,7 @@ export default function CheckoutScreen() {
         <Card variant="elevated">
           {session.cart.items.map((item) => (
             <Text key={item.id} style={[styles.itemLine, { color: colors.text }]}>
-              {item.name} × {item.qty}
+              {item.weightKg != null ? `${item.name} · ${formatWeightLine(item)}` : `${item.name} × ${item.qty}`}
             </Text>
           ))}
         </Card>
@@ -125,6 +126,7 @@ export default function CheckoutScreen() {
         <Card variant="elevated">
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Способ оплаты</Text>
           <PaymentMethodPicker value={method} onChange={setMethod} />
+          <CashbackPlaque items={session.cart.items} method={method} />
           <Text style={[styles.mutedSmall, { color: colors.textMuted }]}>
             Вы подтверждаете оплату этой корзины на сумму {formatRub(session.cart.total)}
           </Text>
