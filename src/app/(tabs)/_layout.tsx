@@ -23,7 +23,6 @@ export default function TabLayout() {
     >
       <Tabs.Screen name="index" options={{ title: 'Главная' }} />
       <Tabs.Screen name="scan-and-go" options={{ title: 'Scan & Go' }} />
-      <Tabs.Screen name="take-and-go" options={{ title: 'Take & Go' }} />
       <Tabs.Screen name="settings" options={{ title: 'Профиль' }} />
     </Tabs>
   );

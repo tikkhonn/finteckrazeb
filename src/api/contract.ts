@@ -7,7 +7,13 @@ import type {
   Refund,
   Session,
   Store,
+  StoreTillExchange,
 } from '@/domain/types';
+
+/**
+ * В сторону магазина уходит только {@link StoreTillExchange}: sessionToken (= id сессии),
+ * позиции (SKU, qty, weightKg, price) и status PAID. PayRequest и прочие вызовы не содержат ПДн профиля.
+ */
 
 export interface PayRequest {
   cartVersion: number;
@@ -31,4 +37,6 @@ export interface VtbGoApi {
   listPurchases(): Promise<PurchaseSummary[]>;
   getPurchase(sessionId: string): Promise<Purchase>;
   requestRefund(sessionId: string, itemId: string): Promise<Refund>;
+  /** Передаёт обезличенный конверт кассе после успешной оплаты. */
+  releaseToStore(sessionId: string): Promise<StoreTillExchange>;
 }

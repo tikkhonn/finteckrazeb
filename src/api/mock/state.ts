@@ -5,7 +5,10 @@ import type {
   PaymentStatus,
   Receipt,
   Refund,
+  RiskCheck,
   Session,
+  StoreTillExchange,
+  UserRiskState,
 } from '@/domain/types';
 
 export interface MockState {
@@ -18,6 +21,9 @@ export interface MockState {
   events: DomainEvent[];
   idempotency: Record<string, string>;
   hiddenOutcomes: Record<string, PaymentStatus>;
+  riskChecks?: Record<string, RiskCheck>;
+  userRiskByProfile?: Record<string, UserRiskState>;
+  storeTillBySession?: Record<string, StoreTillExchange>;
 }
 
 export function emptyState(): MockState {
@@ -31,6 +37,9 @@ export function emptyState(): MockState {
     events: [],
     idempotency: {},
     hiddenOutcomes: {},
+    riskChecks: {},
+    userRiskByProfile: {},
+    storeTillBySession: {},
   };
 }
 

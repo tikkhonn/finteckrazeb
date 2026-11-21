@@ -63,6 +63,14 @@ export interface Cart {
   version: number;
 }
 
+export type RiskLevel = 'clear' | 'yellow' | 'red';
+export type RiskResolution = 'pending' | 'ok' | 'mismatch';
+
+export interface SessionRemovedLine {
+  name: string;
+  unitPrice: number;
+}
+
 export interface Session {
   id: string;
   storeId: string;
@@ -74,6 +82,36 @@ export interface Session {
   paymentRevealAt?: number;
   createdAt: number;
   updatedAt: number;
+  removedBeforePay?: SessionRemovedLine[];
+}
+
+export interface UserRiskState {
+  profileId: string;
+  softDecayRemaining: number;
+  monitoringVisitsRemaining: number;
+  mismatchCount: number;
+  forceCheck: boolean;
+}
+
+export interface RiskSpotItem {
+  name: string;
+  qty: number;
+  amount: number;
+}
+
+export interface RiskCheck {
+  sessionId: string;
+  profileId: string;
+  level: RiskLevel;
+  reasons: string[];
+  customerNotice: boolean;
+  attentionRequired: boolean;
+  monitoringOnly?: boolean;
+  spotItems: RiskSpotItem[];
+  itemCount: number;
+  total: number;
+  paidAt: number;
+  resolved: RiskResolution;
 }
 
 export interface Consent {
@@ -94,6 +132,7 @@ export interface Payment {
   cartVersion: number;
   idempotencyKey: string;
   createdAt: number;
+  customerNotice?: boolean;
 }
 
 export interface Receipt {
@@ -142,6 +181,42 @@ export interface Purchase {
   payment?: Payment;
   receipt?: Receipt;
   refunds: Refund[];
+  riskCheck?: RiskCheck;
+}
+
+export type StoreTillStatus = 'PAID';
+
+export interface StoreTillLine {
+  sku: string;
+  qty: number;
+  price: number;
+  weightKg?: number;
+}
+
+/** Обезличенный пакет в сторону магазина: без ФИО, телефона и карты. */
+export interface StoreTillExchange {
+  sessionToken: string;
+  items: StoreTillLine[];
+  status: StoreTillStatus;
+}
+
+export interface ExitLaneEntry {
+  sessionId: string;
+  storeName: string;
+  itemCount: number;
+  total: number;
+  paidAt: number;
+}
+
+export interface AttentionEntry {
+  sessionId: string;
+  storeName: string;
+  level: RiskLevel;
+  reasons: string[];
+  spotItems: RiskSpotItem[];
+  itemCount: number;
+  total: number;
+  paidAt: number;
 }
 
 export type CatalogPreset = 'basic' | 'full';

@@ -17,9 +17,9 @@ import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-HTML = HERE / "pay-and-go.html"
+HTML = HERE / "pay-and-go_2.html"
 OUT = HERE / "pay-and-go.pptx"
-SLIDE_COUNT = 14
+SLIDE_COUNT = 10
 VIEWPORT = {"width": 1920, "height": 1080}
 WAIT_MS = 2200  # анимации reveal
 

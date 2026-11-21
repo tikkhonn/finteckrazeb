@@ -38,5 +38,21 @@
     "barcode": "4600494600173",
     "name": "Вода BonAqua 0,5 л",
     "price": 65
+  },
+  {
+    "barcode": "plu-00105",
+    "name": "Яблоки Гала",
+    "price": 180,
+    "isWeighted": true,
+    "pluCode": "00105",
+    "cashbackRate": 0.05
+  },
+  {
+    "barcode": "plu-00112",
+    "name": "Бананы",
+    "price": 160,
+    "isWeighted": true,
+    "pluCode": "00112",
+    "cashbackRate": 0.05
   }
 ]

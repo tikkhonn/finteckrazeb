@@ -107,7 +107,6 @@ export function StoreMap({ compact = false, features, selectedId, onPinPress }: 
       ) : (
         <View style={[styles.legend, { backgroundColor: colors.surface }]} pointerEvents="none">
           <LegendDot color={colors.primary} label="Scan & Go" fg={colors.text} />
-          <LegendDot color={colors.accent} label="Take & Go" fg={colors.text} />
         </View>
       )}
     </View>
@@ -116,7 +115,7 @@ export function StoreMap({ compact = false, features, selectedId, onPinPress }: 
 
 function StoreMarker({ pin, active, compact }: { pin: MapPin; active: boolean; compact: boolean }) {
   const { colors } = useTheme();
-  const tint = pin.feature === 'Take & Go' ? colors.accent : colors.primary;
+  const tint = colors.primary;
   return (
     <View style={styles.marker}>
       <View

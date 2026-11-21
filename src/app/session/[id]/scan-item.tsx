@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Text, TextInput, View } from 'react-native';
 
 import { getMockApi } from '@/api/apiProvider';
-import { APPLE_SCALE_CODE, DEMO_ENERGY } from '@/api/mock/demoSkus';
+import { APPLE_SCALE_CODE, BANANA_SCALE_CODE, DEMO_ENERGY } from '@/api/mock/demoSkus';
 import { isVtbGoError } from '@/domain/errors';
 import { demoExciseMark, parseScannedCode } from '@/domain/scanner/barcodeParser';
 import { BarcodeScanner } from '@/features/BarcodeScanner';
@@ -159,6 +159,7 @@ export default function ScanItemScreen() {
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
         <Chip label="+ Энергетик 18+ (Акциз)" onPress={() => void quick(demoExciseMark(DEMO_ENERGY.barcode))} />
         <Chip label="+ Весовые яблоки 450г" onPress={() => void quick(APPLE_SCALE_CODE)} />
+        <Chip label="+ Бананы 320 г" onPress={() => void quick(BANANA_SCALE_CODE)} />
       </View>
       <Text style={{ color: colors.textMuted }}>Или введите EAN-13 вручную</Text>
       <TextInput

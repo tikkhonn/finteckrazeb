@@ -9,9 +9,13 @@ export const DEMO_COLA = rows.find((item) => item.barcode === '4607086560213') a
 export const DEMO_WATER = rows.find((item) => item.barcode === '4609900000019') as CatalogItem;
 export const DEMO_ENERGY = rows.find((item) => item.barcode === '4609900000118') as CatalogItem;
 export const DEMO_APPLES = rows.find((item) => item.pluCode === '00105') as CatalogItem;
+export const DEMO_BANANAS = rows.find((item) => item.pluCode === '00112') as CatalogItem;
 
 /** Этикетка весов из ТЗ: PLU 00105, 450 г. Контрольная цифра демонстрационная. */
 export const APPLE_SCALE_CODE = '2100105004509';
+
+/** PLU 00112, 320 г. Контрольная цифра демонстрационная. */
+export const BANANA_SCALE_CODE = '2100112003206';
 
 export function payloadForDemo(item: CatalogItem, now = Date.now()): string {
   if (item.requiresExcise) {
@@ -19,6 +23,9 @@ export function payloadForDemo(item: CatalogItem, now = Date.now()): string {
   }
   if (item.pluCode === DEMO_APPLES.pluCode) {
     return APPLE_SCALE_CODE;
+  }
+  if (item.pluCode === DEMO_BANANAS.pluCode) {
+    return BANANA_SCALE_CODE;
   }
   if (item.isWeighted && item.pluCode) {
     return `21${item.pluCode}004500`;

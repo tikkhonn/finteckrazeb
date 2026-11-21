@@ -35,7 +35,6 @@ const TABS: {
 }[] = [
   { name: 'index', title: 'Главная', symbol: 'house.fill', glyph: '⌂' },
   { name: 'scan-and-go', title: 'Scan & Go', image: require('../../assets/images/icon-scan-and-go.png') },
-  { name: 'take-and-go', title: 'Take & Go', image: require('../../assets/images/icon-take-and-go.png') },
   { name: 'settings', title: 'Профиль', symbol: 'person.fill', glyph: '☺' },
 ];
 

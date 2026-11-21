@@ -25,11 +25,6 @@ export default function StoresMapScreen() {
   );
 
   function onPinPress(pin: MapPin) {
-    if (pin.feature === 'Take & Go') {
-      setRemotePin(pin);
-      setSelectedId(null);
-      return;
-    }
     if (NEARBY_IDS.has(pin.id)) {
       setSelectedId(pin.id);
       setRemotePin(null);
@@ -53,19 +48,6 @@ export default function StoresMapScreen() {
           <StoreMap selectedId={selectedId ?? remotePin?.id} onPinPress={onPinPress} />
         </Card>
       </AnimatedEnter>
-
-      {remotePin?.feature === 'Take & Go' ? (
-        <AnimatedEnter index={2}>
-          <Card variant="elevated">
-            <Text style={[styles.store, { color: colors.text }]}>{remotePin.name}</Text>
-            <Text style={[styles.meta, { color: colors.success }]}>
-              {remotePin.feature} · {formatDistance(remotePin.distanceM)}
-            </Text>
-            <Text style={[styles.note, { color: colors.textMuted }]}>{remotePin.address}</Text>
-            <Text style={[styles.note, { color: colors.textMuted }]}>Take & Go скоро появится в приложении.</Text>
-          </Card>
-        </AnimatedEnter>
-      ) : null}
 
       {remoteStore ? (
         <AnimatedEnter index={2}>

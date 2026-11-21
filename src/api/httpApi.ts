@@ -1,5 +1,6 @@
 import type { AddItemInput, PayRequest, VtbGoApi } from '@/api/contract';
 import { VtbGoError } from '@/domain/errors';
+import { buildStoreTillExchange } from '@/domain/storeTill';
 import type {
   Cart,
   Payment,
@@ -8,7 +9,16 @@ import type {
   Refund,
   Session,
   Store,
+  StoreTillExchange,
 } from '@/domain/types';
+
+const PAID_STATUSES = new Set<Session['status']>([
+  'paid_awaiting_receipt',
+  'completed',
+  'refund_requested',
+  'refund_approved',
+  'refunded',
+]);
 
 async function request<T>(baseUrl: string, path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${baseUrl}${path}`, {
@@ -93,5 +103,18 @@ export class HttpApi implements VtbGoApi {
       method: 'POST',
       body: JSON.stringify({ itemId }),
     });
+  }
+
+  async releaseToStore(sessionId: string): Promise<StoreTillExchange> {
+    const session = await this.getSession(sessionId);
+    if (!PAID_STATUSES.has(session.status)) {
+      throw new VtbGoError('INVALID_STATE', 'Конверт для кассы доступен после успешной оплаты.');
+    }
+    const exchange = buildStoreTillExchange(session.id, session.cart.items);
+    await request<StoreTillExchange>(this.baseUrl, `/sessions/${sessionId}/store-till`, {
+      method: 'POST',
+      body: JSON.stringify(exchange),
+    });
+    return exchange;
   }
 }

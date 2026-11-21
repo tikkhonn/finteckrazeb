@@ -29,6 +29,5 @@ export const FAQ_GLYPHS: Record<string, HubGlyph> = {
   card: { symbol: 'heart.fill', glyph: '♡', tint: '#E45D73' },
   cash: { symbol: 'banknote.fill', glyph: '₽', tint: '#6E56CF' },
   docs: { symbol: 'person.text.rectangle.fill', glyph: '▤', tint: '#5C6B80' },
-  take: { symbol: 'bag.fill', glyph: '◻', tint: '#009FDF' },
   all: { symbol: 'ellipsis.circle.fill', glyph: '…', tint: '#6B7789' },
 };

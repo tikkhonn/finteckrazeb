@@ -148,7 +148,7 @@ export const INFO_PAGES: Record<string, InfoPage> = {
     title: 'Обновление Pay and Go',
     subtitle: 'Главная с сервисами, карта магазинов рядом и новая навигация.',
     bullets: [
-      'Лента Scan & Go, Take & Go и OOObnal',
+      'Лента Scan & Go и OOObnal',
       'Предложения банка и новости на главной',
       'Покупка по-прежнему во вкладке Scan & Go',
     ],

@@ -6,22 +6,35 @@ import { assertEan13 } from '@/domain/ean';
 import { VtbGoError } from '@/domain/errors';
 import { exitPassExpiresAt, exitPassToken } from '@/domain/exitPass';
 import { parseScannedCode, type ParsedCode } from '@/domain/scanner/barcodeParser';
+import { buildStoreTillExchange } from '@/domain/storeTill';
 import { assertTransition, EDITABLE_STATUSES, PURCHASE_HISTORY_STATUSES } from '@/domain/stateMachine';
+import type { ProfileId } from '@/domain/profile';
+import {
+  applyCheckOk,
+  applyMismatch,
+  normalizeUserRisk,
+  scorePaymentVisit,
+} from '@/domain/risk/scoreVisit';
 import type {
+  AttentionEntry,
   Cart,
   CartActor,
   CartItem,
   CatalogItem,
   Consent,
   DomainEvent,
+  ExitLaneEntry,
   Payment,
   Purchase,
   PurchaseSummary,
   Receipt,
   Refund,
+  RiskCheck,
   Session,
   SimulatorConfig,
   Store,
+  StoreTillExchange,
+  UserRiskState,
 } from '@/domain/types';
 import type { PayRequest } from '@/api/contract';
 import { findStoreById, findStoreByQr, STORES } from './stores';
@@ -43,6 +56,9 @@ export interface EngineDeps {
   getSim: () => SimulatorConfig;
   /** Нет функции — считаем покупателя совершеннолетним (старые тесты). */
   isAdultVerified?: () => boolean;
+  getProfileId?: () => ProfileId;
+  /** Для детерминированных тестов. */
+  rng?: () => number;
 }
 
 export interface AddItemExtras {
@@ -321,6 +337,10 @@ export class MockEngine {
     if (!current) {
       throw new VtbGoError('ITEM_NOT_FOUND', 'Позиция не найдена в корзине.');
     }
+    if (qty === 0 && current.unitPrice >= 200) {
+      const removed = session.removedBeforePay ?? [];
+      session.removedBeforePay = [...removed, { name: current.name, unitPrice: current.unitPrice }];
+    }
     if (current.weightKg != null && qty !== 0 && qty !== current.qty) {
       throw new VtbGoError('INVALID_STATE', 'Весовой пакет нельзя изменить счётчиком. Удалите его и взвесьте ещё раз.');
     }
@@ -501,11 +521,13 @@ export class MockEngine {
     const payment = session.paymentId ? this.state.payments[session.paymentId] : undefined;
     const receipt = Object.values(this.state.receipts).find((item) => item.sessionId === sessionId);
     const refunds = Object.values(this.state.refunds).filter((item) => item.sessionId === sessionId);
+    const riskCheck = this.riskChecks()[sessionId];
     return {
       session: this.cloneSession(session),
       payment: payment ? this.clonePayment(payment) : undefined,
       receipt: receipt ? { ...receipt, items: receipt.items.map((item) => ({ ...item })) } : undefined,
       refunds: refunds.map((item) => ({ ...item })),
+      riskCheck: riskCheck ? { ...riskCheck, spotItems: [...riskCheck.spotItems], reasons: [...riskCheck.reasons] } : undefined,
     };
   }
 
@@ -610,8 +632,90 @@ export class MockEngine {
     }
   }
 
+  listAssistantBoard(): { exit: ExitLaneEntry[]; attention: AttentionEntry[] } {
+    const paidStatuses: Session['status'][] = ['paid_awaiting_receipt', 'completed', 'refund_requested', 'refund_approved', 'refunded'];
+    const exit: ExitLaneEntry[] = [];
+    const attention: AttentionEntry[] = [];
+
+    for (const session of Object.values(this.state.sessions)) {
+      if (!paidStatuses.includes(session.status) || !session.paymentId) {
+        continue;
+      }
+      const check = this.riskChecks()[session.id];
+      if (!check) {
+        continue;
+      }
+      const paidAt = this.requirePayment(session.paymentId).createdAt;
+      if (check.attentionRequired && check.resolved === 'pending') {
+        attention.push({
+          sessionId: session.id,
+          storeName: session.storeName,
+          level: check.level,
+          reasons: [...check.reasons],
+          spotItems: check.spotItems.map((item) => ({ ...item })),
+          itemCount: check.itemCount,
+          total: check.total,
+          paidAt,
+        });
+        continue;
+      }
+      exit.push({
+        sessionId: session.id,
+        storeName: session.storeName,
+        itemCount: check.itemCount,
+        total: check.total,
+        paidAt,
+      });
+    }
+
+    const byRecent = (a: { paidAt: number }, b: { paidAt: number }) => b.paidAt - a.paidAt;
+    return {
+      exit: exit.sort(byRecent),
+      attention: attention.sort(byRecent),
+    };
+  }
+
+  confirmRiskCheck(sessionId: string): RiskCheck {
+    const check = this.requireRiskCheck(sessionId);
+    if (check.resolved !== 'pending') {
+      return { ...check, reasons: [...check.reasons], spotItems: [...check.spotItems] };
+    }
+    const profileId = check.profileId as ProfileId;
+    const profiles = this.userRiskProfiles();
+    profiles[profileId] = applyCheckOk(profileId, profiles[profileId]);
+    const next: RiskCheck = { ...check, resolved: 'ok', attentionRequired: false };
+    this.riskChecks()[sessionId] = next;
+    this.record(sessionId, 'risk_check_ok', 'store', 'Сверка ОК');
+    return { ...next, reasons: [...next.reasons], spotItems: [...next.spotItems] };
+  }
+
+  releaseToStore(sessionId: string): StoreTillExchange {
+    const stored = this.storeTillBySession()[sessionId];
+    if (!stored) {
+      throw new VtbGoError('INVALID_STATE', 'Конверт для кассы доступен после успешной оплаты.');
+    }
+    return {
+      sessionToken: stored.sessionToken,
+      status: stored.status,
+      items: stored.items.map((item) => ({ ...item })),
+    };
+  }
+
+  reportRiskMismatch(sessionId: string): RiskCheck {
+    const check = this.requireRiskCheck(sessionId);
+    const profileId = check.profileId as ProfileId;
+    const profiles = this.userRiskProfiles();
+    profiles[profileId] = applyMismatch(profileId, profiles[profileId]);
+    const next: RiskCheck = { ...check, resolved: 'mismatch', level: 'red', attentionRequired: false };
+    this.riskChecks()[sessionId] = next;
+    this.record(sessionId, 'risk_check_mismatch', 'store', 'Расхождение на сверке');
+    return { ...next, reasons: [...next.reasons], spotItems: [...next.spotItems] };
+  }
+
   private succeedPayment(session: Session, payment: Payment, receiptMode: SimulatorConfig['receiptMode']): void {
     payment.status = 'succeeded';
+    this.scoreRiskForPayment(session, payment);
+    this.publishStoreTill(session);
     this.record(session.id, 'payment_succeeded', 'bank', `Оплачено ${payment.amount} ₽`);
     if (session.status !== 'paid_awaiting_receipt' && session.status !== 'completed') {
       this.transition(session, 'paid_awaiting_receipt');
@@ -792,5 +896,70 @@ export class MockEngine {
 
   private clonePayment(payment: Payment): Payment {
     return { ...payment };
+  }
+
+  private riskChecks(): Record<string, RiskCheck> {
+    if (!this.state.riskChecks) {
+      this.state.riskChecks = {};
+    }
+    return this.state.riskChecks;
+  }
+
+  private userRiskProfiles(): Record<string, UserRiskState> {
+    if (!this.state.userRiskByProfile) {
+      this.state.userRiskByProfile = {};
+    }
+    return this.state.userRiskByProfile;
+  }
+
+  private requireRiskCheck(sessionId: string): RiskCheck {
+    const check = this.riskChecks()[sessionId];
+    if (!check) {
+      throw new VtbGoError('INVALID_STATE', 'Для сессии нет решения по риску.');
+    }
+    return check;
+  }
+
+  private storeTillBySession(): Record<string, StoreTillExchange> {
+    if (!this.state.storeTillBySession) {
+      this.state.storeTillBySession = {};
+    }
+    return this.state.storeTillBySession;
+  }
+
+  private publishStoreTill(session: Session): void {
+    const items = session.cart.items.map((item) =>
+      withLineCashback({ ...item, exciseCodes: item.exciseCodes ?? [] }),
+    );
+    const exchange = buildStoreTillExchange(session.id, items);
+    this.storeTillBySession()[session.id] = exchange;
+    this.record(session.id, 'store_till_ready', 'store', `PAID, ${items.length} поз.`);
+  }
+
+  private scoreRiskForPayment(session: Session, payment: Payment): void {
+    const profileId = this.deps.getProfileId?.() ?? 'anna';
+    const profiles = this.userRiskProfiles();
+    const userRisk = normalizeUserRisk(profileId, profiles[profileId]);
+    const rng = this.deps.rng?.() ?? Math.random();
+    const now = this.deps.now();
+    const items = session.cart.items.map((item) => withLineCashback({ ...item, exciseCodes: item.exciseCodes ?? [] }));
+
+    const { check, nextUserRisk } = scorePaymentVisit({
+      profileId,
+      startedAt: session.createdAt,
+      now,
+      cartItems: items,
+      cartTotal: session.cart.total,
+      removedLines: session.removedBeforePay ?? [],
+      userRisk,
+      rng,
+    });
+
+    check.sessionId = session.id;
+    profiles[profileId] = nextUserRisk;
+    this.riskChecks()[session.id] = check;
+    payment.customerNotice = check.customerNotice;
+    const flagLine = check.reasons.length > 0 ? check.reasons.join('; ') : 'чистый визит';
+    this.record(session.id, 'risk_score', 'system', `${check.level}: ${flagLine}`);
   }
 }

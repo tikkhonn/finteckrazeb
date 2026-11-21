@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { ExitTurnstilePass } from '@/features/ExitTurnstilePass';
+import { SpotCheckNotice } from '@/features/SpotCheckNotice';
 import { PurchaseSuccessHeader } from '@/features/PurchaseSuccessHeader';
 import { ReceiptPendingCard } from '@/features/ReceiptPendingCard';
 import { ReceiptView } from '@/features/ReceiptView';
@@ -35,9 +36,11 @@ export default function DoneScreen() {
           storeName={purchase.session.storeName}
           paidAt={paidAt}
         />
+        <Text style={[styles.sessionId, { color: colors.textMuted }]}>Сессия {purchase.session.id}</Text>
       </AnimatedEnter>
 
       <AnimatedEnter index={1}>
+        {purchase.payment?.customerNotice ? <SpotCheckNotice /> : null}
         {purchase.receipt ? (
           <View style={{ gap: spacing.md, width: '100%' }}>
             <ExitTurnstilePass
@@ -81,6 +84,12 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   muted: { fontSize: 15 },
+  sessionId: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: spacing.xs,
+    fontVariant: ['tabular-nums'],
+  },
   actions: {
     width: '100%',
     gap: spacing.sm,

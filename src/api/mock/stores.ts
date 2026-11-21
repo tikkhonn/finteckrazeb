@@ -59,7 +59,7 @@ export function formatDistance(meters: number): string {
   return meters < 1000 ? `${meters} м` : `${(meters / 1000).toFixed(1).replace('.', ',')} км`;
 }
 
-export type StoreFeature = 'Scan & Go' | 'Take & Go';
+export type StoreFeature = 'Scan & Go';
 
 export interface MapPin {
   id: string;
@@ -82,20 +82,13 @@ function pinFromNode(
   };
 }
 
-export const MAP_PINS: MapPin[] = [
-  ...STORES.map((store) =>
-    pinFromNode(store.id, {
-      name: store.name,
-      address: store.address,
-      feature: 'Scan & Go',
-    }),
-  ),
-  pinFromNode('pin_box', {
-    name: 'Box 24',
-    address: 'ул. Садовая, 9',
-    feature: 'Take & Go',
+export const MAP_PINS: MapPin[] = STORES.map((store) =>
+  pinFromNode(store.id, {
+    name: store.name,
+    address: store.address,
+    feature: 'Scan & Go',
   }),
-];
+);
 
 export function findStoreByQr(raw: string): Store | undefined {
   const value = raw.trim();

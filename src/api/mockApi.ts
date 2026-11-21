@@ -18,6 +18,8 @@ export class MockApi implements VtbGoApi {
     now: () => Date.now(),
     getSim: getSimulatorConfig,
     isAdultVerified: () => resolveProfile(useProfileStore.getState()).isAdultVerified,
+    getProfileId: () => useProfileStore.getState().activeId,
+    rng: () => Math.random(),
   });
 
   private catalogNotice: string | null = null;
@@ -251,6 +253,28 @@ export class MockApi implements VtbGoApi {
 
   listEvents(sessionId?: string): DomainEvent[] {
     return this.engine.listEvents(sessionId);
+  }
+
+  listAssistantBoard() {
+    return this.engine.listAssistantBoard();
+  }
+
+  async confirmRiskCheck(sessionId: string) {
+    const check = this.engine.confirmRiskCheck(sessionId);
+    await this.persist();
+    return check;
+  }
+
+  async reportRiskMismatch(sessionId: string) {
+    const check = this.engine.reportRiskMismatch(sessionId);
+    await this.persist();
+    return check;
+  }
+
+  async releaseToStore(sessionId: string) {
+    const exchange = this.engine.releaseToStore(sessionId);
+    await this.persist();
+    return exchange;
   }
 
   async reset(): Promise<void> {

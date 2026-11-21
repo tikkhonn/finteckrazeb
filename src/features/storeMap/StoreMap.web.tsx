@@ -16,7 +16,7 @@ export function StoreMap({ compact = false, features, selectedId, onPinPress }: 
       <Text style={[styles.note, { color: colors.textMuted }]}>Интерактивная карта доступна в приложении</Text>
       {shown.map((pin) => {
         const active = pin.id === target?.id;
-        const tint = pin.feature === 'Take & Go' ? colors.accent : colors.primary;
+        const tint = colors.primary;
         return (
           <Pressable
             key={pin.id}

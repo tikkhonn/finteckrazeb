@@ -3,11 +3,18 @@ import { useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 
 import { getMockApi, isMockApi } from '@/api/apiProvider';
-import { APPLE_SCALE_CODE, DEMO_COLA, DEMO_ENERGY, payloadForDemo } from '@/api/mock/demoSkus';
+import {
+  APPLE_SCALE_CODE,
+  BANANA_SCALE_CODE,
+  DEMO_COLA,
+  DEMO_ENERGY,
+  payloadForDemo,
+} from '@/api/mock/demoSkus';
 import { isVtbGoError } from '@/domain/errors';
 import type { CatalogItem, CatalogPreset, PaymentSimMode, ReceiptSimMode } from '@/domain/types';
 import { applyFlipHide } from '@/features/applyFlipHide';
 import { DemoCatalogEditor } from '@/features/DemoCatalogEditor';
+import { KsoAssistantBoard } from '@/features/KsoAssistantBoard';
 import { queryClient } from '@/queries/client';
 import { queryKeys } from '@/queries/keys';
 import { useDemoStore } from '@/store/demoStore';
@@ -44,6 +51,7 @@ export default function DemoPanelScreen() {
   const setReceiptMode = useDemoStore((s) => s.setReceiptMode);
   const hideBalances = usePrefsStore((s) => s.hideBalances);
   const [catalog, setCatalog] = useState<CatalogItem[]>(() => mock?.getCatalog() ?? []);
+  const [panelTab, setPanelTab] = useState<'demo' | 'kso'>('demo');
 
   if (!isMockApi || !mock) {
     return (
@@ -105,6 +113,23 @@ export default function DemoPanelScreen() {
         Сессия: {sessionId ?? 'нет'} · долгое нажатие на «ВТБ Go» открывает эту панель
       </Text>
 
+      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+        <Button
+          title="Демо"
+          variant={panelTab === 'demo' ? 'primary' : 'secondary'}
+          onPress={() => setPanelTab('demo')}
+        />
+        <Button
+          title="ТСД Ассистента КСО"
+          variant={panelTab === 'kso' ? 'primary' : 'secondary'}
+          onPress={() => setPanelTab('kso')}
+        />
+      </View>
+
+      {panelTab === 'kso' ? (
+        <KsoAssistantBoard />
+      ) : (
+        <>
       <DemoCatalogEditor
         catalog={catalog}
         onSave={(item) => mutateCatalog(() => mock.upsertCatalogItem(item))}
@@ -140,6 +165,7 @@ export default function DemoPanelScreen() {
           onPress={() => addPayload(payloadForDemo(DEMO_ENERGY), false, true)}
         />
         <Button title="+ Весовые яблоки 450г" variant="secondary" onPress={() => addPayload(APPLE_SCALE_CODE, false, true)} />
+        <Button title="+ Бананы 320 г" variant="secondary" onPress={() => addPayload(BANANA_SCALE_CODE, false, true)} />
       </Card>
 
       <Card>
@@ -260,6 +286,8 @@ export default function DemoPanelScreen() {
           ]);
         }}
       />
+        </>
+      )}
     </Screen>
   );
 }
